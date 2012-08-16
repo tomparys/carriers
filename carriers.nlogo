@@ -1,9 +1,14 @@
-breed [persons person]
+extensions [table]
+
+breed [people person]
 undirected-link-breed [friends friend]
 
-; ---------------------------------------------------------------------
-; ----- Setup phase ---------------------------------------------------
-; ---------------------------------------------------------------------
+people-own [carrier]
+globals [carriers carrier-users-temp]
+
+; ----------------------------------------------------------------------------------------------------
+; ----- Setup phase ----------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------------------------
 
 to setup
   clear-all
@@ -12,37 +17,35 @@ to setup
   
   create-mobile-network
 
-  layout-radial persons links (turtle 0)
+  layout-radial people links (turtle 0)
   display
-  ask persons [
+  ask people [
     ; Set label for people-nodes to be displayed
     ;set label exp-srev-init
   ]
   reset-ticks
 end
 
+; ----- Create social network ---------------------------------------------------------------------------
 to create-social-network
-  set-default-shape persons "circle"
+  set-default-shape people "circle"
   
-  create-persons 1 [
-    set size 1.5
-    set color red
-  ]
-  repeat number-of-persons [
-    create-persons 1 [
-      set color blue
+  repeat number-of-people [
+    create-people 1 [
+      set carrier 0
+      set color grey
     ]
   ]
   
-  ask one-of persons [
-    create-friend-with one-of other persons
+  ask one-of people [
+    create-friend-with one-of other people
   ]
-  ask persons [
-    create-friend-with one-of other persons with [count friend-neighbors > 0]
+  ask people [
+    create-friend-with one-of other people with [count friend-neighbors > 0]
   ]
   repeat number-of-friendships [
-    ask one-of persons [
-      create-friend-with one-of other persons
+    ask one-of people [
+      create-friend-with one-of other people
     ]
   ]
 
@@ -51,24 +54,78 @@ to create-social-network
   ;]
 end
 
+; ----- Create mobile network ---------------------------------------------------------------------------
 to create-mobile-network
-  ask persons [
-    ; set up mobile network
+  set carriers [red blue green]
+  set carrier-users-temp [[0 0] [red 0] [blue 0] [green 0]]
+  
+  ask people [
+    if random 100 < 5 [
+      set carrier (item (random (length carriers)) carriers)
+      set color carrier
+    ]
   ]
 end
 
 to-report avg-friend-count
   let s 0
-  ask persons [
+  ask people [
     set s s + count friend-neighbors
   ]
-  report s / count persons
+  report s / count people
 end
 
+; ----------------------------------------------------------------------------------------------------
+; ----- Go phase -------------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------------------------
+
+; ----- Go --------------------------------------------------------------------------------------
 to go
-  if not any? persons [ stop ]
+  ;output-print "\n------------------\n"
+  
+  if not any? people [ stop ]
+  
+  spread-network
   
   tick
+end
+
+; ----- Spread network ---------------------------------------------------------------------------
+to spread-network
+  ask people with [carrier = 0] [ ; one-of is temporary
+    if random 100 < 1 [
+      let carriers-friends table:from-list carrier-users-temp   ; temporary table to store carriers of friends
+
+      ; Get carriers of friends into temporary table
+      ask friend-neighbors [
+        table:put carriers-friends carrier ((table:get carriers-friends carrier) + 1)
+      ]
+      ; Find out the highest number of friends with one carrier
+      let most-used-count 0
+      foreach carriers [
+        if most-used-count < table:get carriers-friends ? [
+          set most-used-count table:get carriers-friends ?
+        ]
+      ]
+      ; Get a list of carriers that have this highest number of friends
+      let most-used-carriers []
+      foreach carriers [
+        if most-used-count = table:get carriers-friends ? [
+          set most-used-carriers lput ? most-used-carriers
+        ]
+      ]
+      ; Pick random carrier from that list of most used carriers by friends
+      let carrier-tobe 0
+      if not empty? most-used-carriers [
+        set carrier-tobe item (random (length most-used-carriers)) most-used-carriers
+      ]
+      
+      if carrier-tobe != 0 [
+        set carrier carrier-tobe
+        set color carrier
+      ]
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -120,11 +177,11 @@ SLIDER
 40
 191
 73
-number-of-persons
-number-of-persons
+number-of-people
+number-of-people
 0
 1000
-301
+392
 1
 1
 NIL
@@ -156,7 +213,7 @@ number-of-friendships
 number-of-friendships
 0
 1000
-229
+386
 1
 1
 NIL
@@ -164,28 +221,11 @@ HORIZONTAL
 
 BUTTON
 39
-243
+202
 152
-276
+235
 Go once
 go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-39
-203
-152
-237
-Go till stable
-stabilize
 NIL
 1
 T
@@ -205,6 +245,28 @@ Setup variables
 12
 0.0
 1
+
+MONITOR
+37
+252
+156
+297
+Carrier customers
+count people with [carrier != 0]
+17
+1
+11
+
+MONITOR
+37
+306
+181
+351
+Carrier penetration (%)
+100 * (count people with [carrier != 0]) / number-of-people
+1
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
