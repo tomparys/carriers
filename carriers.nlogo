@@ -1,10 +1,16 @@
 extensions [table]
 
 breed [people person]
+people-own []
 undirected-link-breed [friends friend]
 
-people-own [carrier]
-globals [carriers carrier-users-temp]
+breed [carriers carrier]
+carriers-own [subscribers-count subscribers-last temp-friends]
+
+directed-link-breed [subscribers subscriber]
+
+
+globals [carrier-users-temp]
 
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Setup phase ----------------------------------------------------------------------------------
@@ -23,6 +29,7 @@ to setup
     ; Set label for people-nodes to be displayed
     ;set label exp-srev-init
   ]
+  
   reset-ticks
 end
 
@@ -32,7 +39,6 @@ to create-social-network
   
   repeat number-of-people [
     create-people 1 [
-      set carrier 0
       set color grey
     ]
   ]
@@ -56,13 +62,15 @@ end
 
 ; ----- Create mobile network ---------------------------------------------------------------------------
 to create-mobile-network
-  set carriers [red blue green]
+  create-carriers 1 [set color red]
+  create-carriers 1 [set color green]
+  create-carriers 1 [set color blue]
   set carrier-users-temp [[0 0] [red 0] [blue 0] [green 0]]
   
   ask people [
     if random 100 < 5 [
-      set carrier (item (random (length carriers)) carriers)
-      set color carrier
+      create-subscriber-to one-of carriers
+      set color [color] of one-of out-subscriber-neighbors
     ]
   ]
 end
@@ -92,41 +100,42 @@ end
 
 ; ----- Spread network ---------------------------------------------------------------------------
 to spread-network
-  ask people with [carrier = 0] [ ; one-of is temporary
+  ask people with [not any? out-subscriber-neighbors] [ ; one-of is temporary
     if random 100 < 1 [
-      let carriers-friends table:from-list carrier-users-temp   ; temporary table to store carriers of friends
-
-      ; Get carriers of friends into temporary table
+      ; Reset the temporary counting variable of carriers
+      ask carriers [set temp-friends 0]
+      ; Get carriers of friends into temporary count variables
       ask friend-neighbors [
-        table:put carriers-friends carrier ((table:get carriers-friends carrier) + 1)
+        ask out-subscriber-neighbors [set temp-friends temp-friends + 1]
       ]
       ; Find out the highest number of friends with one carrier
       let most-used-count 0
-      foreach carriers [
-        if most-used-count < table:get carriers-friends ? [
-          set most-used-count table:get carriers-friends ?
-        ]
+      ask carriers [
+        if most-used-count < temp-friends [set most-used-count temp-friends]
       ]
-      ; Get a list of carriers that have this highest number of friends
-      let most-used-carriers []
-      foreach carriers [
-        if most-used-count = table:get carriers-friends ? [
-          set most-used-carriers lput ? most-used-carriers
-        ]
-      ]
-      ; Pick random carrier from that list of most used carriers by friends
-      let carrier-tobe 0
-      if not empty? most-used-carriers [
-        set carrier-tobe item (random (length most-used-carriers)) most-used-carriers
-      ]
-      
-      if carrier-tobe != 0 [
-        set carrier carrier-tobe
-        set color carrier
-      ]
+
+      if most-used-count > 0 [
+        create-subscriber-to one-of carriers with [temp-friends = most-used-count]
+        set color [color] of one-of out-subscriber-neighbors
+      ]      
     ]
   ]
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 196
