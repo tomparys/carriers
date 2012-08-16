@@ -1,5 +1,3 @@
-extensions [table]
-
 breed [people person]
 people-own []
 undirected-link-breed [friends friend]
@@ -9,8 +7,7 @@ carriers-own [subscribers-count subscribers-last temp-friends]
 
 directed-link-breed [subscribers subscriber]
 
-
-globals [carrier-users-temp]
+globals []
 
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Setup phase ----------------------------------------------------------------------------------
@@ -23,7 +20,8 @@ to setup
   
   create-mobile-network
 
-  layout-radial people links (turtle 0)
+  layout-radial people friends (person 0)
+;  layout-radial carriers links (carrier 0)
   display
   ask people [
     ; Set label for people-nodes to be displayed
@@ -62,17 +60,19 @@ end
 
 ; ----- Create mobile network ---------------------------------------------------------------------------
 to create-mobile-network
-  create-carriers 1 [set color red]
+  create-carriers 1 [set color red ]
   create-carriers 1 [set color green]
   create-carriers 1 [set color blue]
-  set carrier-users-temp [[0 0] [red 0] [blue 0] [green 0]]
+  ask carriers [hide-turtle]
   
   ask people [
     if random 100 < 5 [
-      create-subscriber-to one-of carriers
+      create-subscriber-to one-of carriers [hide-link]
       set color [color] of one-of out-subscriber-neighbors
     ]
   ]
+  
+  color-friend-links-based-on-common-carrier
 end
 
 to-report avg-friend-count
@@ -100,6 +100,7 @@ end
 
 ; ----- Spread network ---------------------------------------------------------------------------
 to spread-network
+  ; Spread network carriers
   ask people with [not any? out-subscriber-neighbors] [ ; one-of is temporary
     if random 100 < 1 [
       ; Reset the temporary counting variable of carriers
@@ -115,16 +116,32 @@ to spread-network
       ]
 
       if most-used-count > 0 [
-        create-subscriber-to one-of carriers with [temp-friends = most-used-count]
+        create-subscriber-to one-of carriers with [temp-friends = most-used-count] [hide-link]
         set color [color] of one-of out-subscriber-neighbors
       ]      
     ]
   ]
+  
+  color-friend-links-based-on-common-carrier
 end
 
+to color-friend-links-based-on-common-carrier
+  ; Recolor friend links based on common carrier
+  ask friends [
+    let carrier1 [out-subscriber-neighbors] of end1
+    if (count carrier1 > 0) and (carrier1 = [out-subscriber-neighbors] of end2) [
+      set color [color] of one-of carrier1
+    ]
+  ]
+end
 
+; ----------------------------------------------------------------------------------------------------
+; ----- Debug ----------------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------------------------
 
-
+to debug-test
+;  output-print "=========="
+end
 
 
 
@@ -190,7 +207,7 @@ number-of-people
 number-of-people
 0
 1000
-392
+114
 1
 1
 NIL
@@ -222,7 +239,7 @@ number-of-friendships
 number-of-friendships
 0
 1000
-386
+114
 1
 1
 NIL
@@ -258,10 +275,10 @@ Setup variables
 MONITOR
 37
 252
-156
+165
 297
 Carrier customers
-count people with [carrier != 0]
+count people with [count out-subscriber-neighbors > 0]
 17
 1
 11
@@ -269,13 +286,48 @@ count people with [carrier != 0]
 MONITOR
 37
 306
-181
+165
 351
 Carrier penetration (%)
-100 * (count people with [carrier != 0]) / number-of-people
+100 * (count people with [count out-subscriber-neighbors > 0]) / number-of-people
 1
 1
 11
+
+BUTTON
+34
+758
+177
+791
+Debug test button
+debug-test
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+PLOT
+965
+10
+1381
+313
+Carrier penetration
+NIL
+%
+0.0
+10.0
+0.0
+10.0
+true
+false
+"ask carriers [\n  set subscribers-count 0\n  set subscribers-last 0\n]" "ask carriers [\n  set subscribers-last subscribers-count\n  set subscribers-count count in-subscriber-neighbors\n]"
+PENS
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  if subscribers-last > 0 [\n    plot-pen-up\n    plotxy (ticks - 1) (100 * subscribers-last / number-of-people)\n    plot-pen-down\n    set-plot-pen-color color\n    plotxy ticks (100 * subscribers-count / number-of-people)\n  ]\n]"
 
 @#$#@#$#@
 ## WHAT IS IT?
