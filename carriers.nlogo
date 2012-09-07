@@ -1,129 +1,182 @@
+; Used symbolism:
+;  * variable name "t-carrier" means "the/this carrier in question", such as when passing it to a function, etc.
+;
+
+
 breed [people person]
-people-own []
-undirected-link-breed [friends friend]
+people-own [
+  income
+  friendship-count
+  talkativeness
+  
+  friends-with-operator
+  friends-other
+  
+  monthly-bill
+  potential-bill
+  potential-operator
+  operator-switch-cost
+  willingness-to-switch
+  
+  ini-discount
+  ini-discount-months
+]
 
 breed [carriers carrier]
-carriers-own [subscribers-count subscribers-last temp-friends]
+carriers-own [
+  subscribers-count
+  subscribers-last
+  
+  temp-friends
+]
 
+undirected-link-breed [friends friend]
 directed-link-breed [subscribers subscriber]
 
 globals []
 
+
+
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Setup phase ----------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------
+
 
 to setup
   clear-all
   
   create-social-network
   
-  create-mobile-network
+  create-mobile-carriers
 
   layout-radial people friends (person 0)
-;  layout-radial carriers links (carrier 0)
   display
   ask people [
     ; Set label for people-nodes to be displayed
-    ;set label exp-srev-init
+    ;set label __variable_here__
   ]
   
   reset-ticks
 end
 
+
 ; ----- Create social network ---------------------------------------------------------------------------
 to create-social-network
   set-default-shape people "circle"
   
+  ; Create each person
   repeat number-of-people [
-    create-people 1 [
-      set color grey
-    ]
+    create-people 1 [set color grey]
   ]
   
+  ; Create the first friendship
   ask one-of people [
     create-friend-with one-of other people
   ]
+  ; Create a friendship tree - each person will have at least 1 friendship
   ask people [
     create-friend-with one-of other people with [count friend-neighbors > 0]
   ]
+  ; Create preset number of friendships above the necessary minimum created above
   repeat number-of-friendships [
     ask one-of people [
       create-friend-with one-of other people
     ]
   ]
-
-  ;ask persons [
-  ;  output-print count friend-neighbors
-  ;]
 end
 
-; ----- Create mobile network ---------------------------------------------------------------------------
-to create-mobile-network
+
+; ----- Create mobile carriers ---------------------------------------------------------------------------
+to create-mobile-carriers
+  ; Create the carriers themselves
   create-carriers 1 [set color red ]
   create-carriers 1 [set color green]
   create-carriers 1 [set color blue]
   ask carriers [hide-turtle]
   
-  ask people [
-    if random 100 < 5 [
-      create-subscriber-to one-of carriers [hide-link]
+  ;;  Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
+  ask carriers [
+    let t-carrier self
+    
+    ask one-of people [
+      create-subscriber-to t-carrier [hide-link]
       set color [color] of one-of out-subscriber-neighbors
+      
+      ask friend-neighbors [
+        create-subscriber-to t-carrier [hide-link]
+        set color [color] of one-of out-subscriber-neighbors
+      ]
     ]
   ]
   
   color-friend-links-based-on-common-carrier
 end
 
-to-report avg-friend-count
-  let s 0
-  ask people [
-    set s s + count friend-neighbors
-  ]
-  report s / count people
-end
+
 
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Go phase -------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------
 
+
 ; ----- Go --------------------------------------------------------------------------------------
 to go
   ;output-print "\n------------------\n"
   
-  if not any? people [ stop ]
+  if not any? people with [not any? out-subscriber-neighbors] [ stop ]
   
   spread-network
   
   tick
 end
 
+
 ; ----- Spread network ---------------------------------------------------------------------------
 to spread-network
   ; Spread network carriers
-  ask people with [not any? out-subscriber-neighbors] [ ; one-of is temporary
-    if random 100 < 1 [
-      ; Reset the temporary counting variable of carriers
-      ask carriers [set temp-friends 0]
-      ; Get carriers of friends into temporary count variables
-      ask friend-neighbors [
-        ask out-subscriber-neighbors [set temp-friends temp-friends + 1]
+  ask people with [not any? out-subscriber-neighbors] [
+    
+    ;;  Find out about operators of their friends
+    ask carriers [set temp-friends 0]  ; Reset the temporary counting variable of carriers
+    let mobile-friends 0  ; Temp variable counting how many his friends have mobile phones
+    ; Sum carriers of friends into temporary count variables
+    ask friend-neighbors [
+      ask out-subscriber-neighbors [
+        set temp-friends temp-friends + 1
+        set mobile-friends mobile-friends + 1
       ]
-      ; Find out the highest number of friends with one carrier
-      let most-used-count 0
-      ask carriers [
-        if most-used-count < temp-friends [set most-used-count temp-friends]
+    ]
+    ; Find out the highest number of friends with one carrier
+    let most-used-count 0
+    ask carriers [
+      if most-used-count < temp-friends [set most-used-count temp-friends]
+    ]
+    
+    ;;  Subscribe him to a carrier if he wants to.
+    ifelse most-used-count > 0 [ ; If he has friends using mobile phones
+      ; Weigh his options to join or not to join
+      
+      if random 100 < (mobile-friends * 10 / count friend-neighbors)  [
+        ; Join the most sensible carrier (the one the most friends have, if the prices aren't that high of course)
+        join-carrier one-of carriers with [temp-friends = most-used-count]
       ]
-
-      if most-used-count > 0 [
-        create-subscriber-to one-of carriers with [temp-friends = most-used-count] [hide-link]
-        set color [color] of one-of out-subscriber-neighbors
-      ]      
+    ]
+    [ ; If he does not have friends using mobile phones
+      if random 100 < 1 [
+        join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
+      ]
     ]
   ]
   
   color-friend-links-based-on-common-carrier
 end
+
+
+
+; ----------------------------------------------------------------------------------------------------
+; ----- Helper methods -------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------------------------
+
 
 to color-friend-links-based-on-common-carrier
   ; Recolor friend links based on common carrier
@@ -135,14 +188,32 @@ to color-friend-links-based-on-common-carrier
   ]
 end
 
+
+to join-carrier [t-carrier]  ; person-turtle method
+  create-subscriber-to t-carrier [hide-link]
+  set color [color] of one-of out-subscriber-neighbors
+end
+  
+
+
+to-report avg-friend-count
+  let s 0
+  ask people [
+    set s s + count friend-neighbors
+  ]
+  report s / count people
+end
+
+
+
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Debug ----------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------
 
+
 to debug-test
 ;  output-print "=========="
 end
-
 
 
 
@@ -207,7 +278,7 @@ number-of-people
 number-of-people
 0
 1000
-114
+705
 1
 1
 NIL
@@ -239,7 +310,7 @@ number-of-friendships
 number-of-friendships
 0
 1000
-114
+554
 1
 1
 NIL
