@@ -6,34 +6,44 @@
 breed [people person]
 people-own [
   income
-  friendship-count
+  friends-count
   talkativeness
   
-  friends-with-operator
-  friends-other
-  
-  monthly-bill
-  potential-bill
-  potential-operator
-  operator-switch-cost
+  monthly-bills
+  carrier-switch-cost
   willingness-to-switch
   
   ini-discount
   ini-discount-months
+  
+  ; Temp, counters and graphical representation
 ]
 
 breed [carriers carrier]
 carriers-own [
   subscribers-count
-  subscribers-last
   
+  price-in
+  price-out
+  ini-max-discount
+  ini-current-discount
+  
+  ; Temp, counters and graphical representation
+  subscribers-last
+  ini-current-discount-last
   temp-friends
 ]
 
 undirected-link-breed [friends friend]
 directed-link-breed [subscribers subscriber]
 
-globals []
+globals [
+  ; Variables, computed each turn
+  total-mobile-subscribers
+  
+  ; Constants
+  DISCOUNT-DURATION
+  ]
 
 
 
@@ -44,6 +54,7 @@ globals []
 
 to setup
   clear-all
+  set-constants
   
   create-social-network
   
@@ -57,6 +68,12 @@ to setup
   ]
   
   reset-ticks
+end
+
+
+; ----- Set constants -----------------------------------------------------------------------------------
+to set-constants
+  set DISCOUNT-DURATION 6
 end
 
 
@@ -83,32 +100,61 @@ to create-social-network
       create-friend-with one-of other people
     ]
   ]
+  
+  ; Set variables
+  ask people [
+    set talkativeness random-normal 100 50
+    set friends-count count friend-neighbors
+  ]
 end
 
 
 ; ----- Create mobile carriers ---------------------------------------------------------------------------
 to create-mobile-carriers
-  ; Create the carriers themselves
-  create-carriers 1 [set color red ]
-  create-carriers 1 [set color green]
-  create-carriers 1 [set color blue]
-  ask carriers [hide-turtle]
+  ;;  Create the carriers themselves and set their variables
+  create-carriers 1 [
+    set color blue
+    set price-in 130
+    set price-out 130
+    set ini-max-discount 33
+  ]
+  create-carriers 1 [
+    set color red
+    set price-in 100
+    set price-out 150
+    set ini-max-discount 25
+  ]
+  create-carriers 1 [
+    set color green
+    set price-in 65
+    set price-out 200
+    set ini-max-discount 15
+  ]
+  
+  ; Set common variables
+  ask carriers [
+    set ini-current-discount ini-max-discount
+  ]
+  
   
   ;;  Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
   ask carriers [
     let t-carrier self
     
     ask one-of people [
-      create-subscriber-to t-carrier [hide-link]
-      set color [color] of one-of out-subscriber-neighbors
-      
-      ask friend-neighbors [
-        create-subscriber-to t-carrier [hide-link]
-        set color [color] of one-of out-subscriber-neighbors
-      ]
+      join-carrier t-carrier
+      ask friend-neighbors [join-carrier t-carrier]
     ]
   ]
   
+  ; Counters and graphical representation
+  ask carriers [
+    hide-turtle
+    
+    set subscribers-count count in-subscriber-neighbors
+    set subscribers-last subscribers-count
+    set ini-current-discount-last ini-current-discount
+  ]
   color-friend-links-based-on-common-carrier
 end
 
@@ -125,18 +171,57 @@ to go
   
   if not any? people with [not any? out-subscriber-neighbors] [ stop ]
   
-  spread-network
+  customers-make-choices
   
+  carriers-make-choices
+  
+  ; Counters and graphical representation
+  color-friend-links-based-on-common-carrier
   tick
 end
 
 
-; ----- Spread network ---------------------------------------------------------------------------
-to spread-network
+; ----- Carriers make choices ---------------------------------------------------------------------------
+to carriers-make-choices
+  ; Count subscribers
+  ask carriers [
+    set subscribers-last subscribers-count
+    set subscribers-count count in-subscriber-neighbors
+  ]
+  
+  ;;  Set discount levels for each carrier in the initial stage
+  ask carriers [set ini-current-discount-last ini-current-discount]
+  ifelse total-mobile-subscribers < number-of-people [
+    ; Compute global variables
+    set total-mobile-subscribers sum [subscribers-count] of carriers
+    ;let smallest-carrier min-one-of carriers [subscribers-count]
+    ;let smallest-carrier-subscribers [subscribers-count] of smallest-carrier
+    let smallest-carrier-subscribers min [subscribers-count] of carriers
+  
+    ask carriers [
+      let need-of-discount ((1 - total-mobile-subscribers / number-of-people)) * ((smallest-carrier-subscribers / subscribers-count))
+      set ini-current-discount min (list ini-max-discount (ini-max-discount * need-of-discount * 2))
+    ]
+  ] [
+    ask carriers [set ini-current-discount 0]
+  ]
+  
+  ; debug - change of discount in the mid-run
+  if ticks = 250 [
+    ask one-of carriers with [color = green] [
+      set ini-max-discount 50
+    ]
+  ]
+end
+
+
+; ----- Customers make choices ---------------------------------------------------------------------------
+to customers-make-choices
   ; Spread network carriers
   ask people with [not any? out-subscriber-neighbors] [
+    let t-talkativeness talkativeness  ; save to temp variable for accessibility
     
-    ;;  Find out about operators of their friends
+    ;;  Find out about carriers of their friends
     ask carriers [set temp-friends 0]  ; Reset the temporary counting variable of carriers
     let mobile-friends 0  ; Temp variable counting how many his friends have mobile phones
     ; Sum carriers of friends into temporary count variables
@@ -147,28 +232,35 @@ to spread-network
       ]
     ]
     ; Find out the highest number of friends with one carrier
-    let most-used-count 0
+    let lowest-potential-bill 0
+    let lowest-potential-carrier 0
     ask carriers [
-      if most-used-count < temp-friends [set most-used-count temp-friends]
+      ; Count potential bill
+      let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out) * t-talkativeness * (discount-multiplier ini-current-discount)
+      
+      if lowest-potential-bill > potential-bill or lowest-potential-bill = 0 [
+        set lowest-potential-bill potential-bill
+        set lowest-potential-carrier self
+      ]
     ]
     
-    ;;  Subscribe him to a carrier if he wants to.
-    ifelse most-used-count > 0 [ ; If he has friends using mobile phones
-      ; Weigh his options to join or not to join
-      
-      if random 100 < (mobile-friends * 10 / count friend-neighbors)  [
-        ; Join the most sensible carrier (the one the most friends have, if the prices aren't that high of course)
-        join-carrier one-of carriers with [temp-friends = most-used-count]
+    ;;  Subscribe to a carrier, if he wants to.
+    ifelse mobile-friends > 0 [ ; If he has friends using mobile phones
+      ; Weigh his options to join or not to join this month
+      if random 1000 < (10 * mobile-friends / friends-count)  [
+        ; Join the most sensible carrier
+        join-carrier lowest-potential-carrier
+        set ini-discount [ini-current-discount] of lowest-potential-carrier
+        set ini-discount-months DISCOUNT-DURATION
       ]
     ]
     [ ; If he does not have friends using mobile phones
-      if random 100 < 1 [
+      if random 1000 < 1 [
         join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
       ]
     ]
   ]
   
-  color-friend-links-based-on-common-carrier
 end
 
 
@@ -202,6 +294,10 @@ to-report avg-friend-count
     set s s + count friend-neighbors
   ]
   report s / count people
+end
+
+to-report discount-multiplier [discount]
+  report (100 - discount) / 100
 end
 
 
@@ -278,7 +374,7 @@ number-of-people
 number-of-people
 0
 1000
-705
+1000
 1
 1
 NIL
@@ -310,7 +406,7 @@ number-of-friendships
 number-of-friendships
 0
 1000
-554
+813
 1
 1
 NIL
@@ -349,7 +445,7 @@ MONITOR
 165
 297
 Carrier customers
-count people with [count out-subscriber-neighbors > 0]
+;count people with [count out-subscriber-neighbors > 0]\ntotal-mobile-subscribers
 17
 1
 11
@@ -360,7 +456,7 @@ MONITOR
 165
 351
 Carrier penetration (%)
-100 * (count people with [count out-subscriber-neighbors > 0]) / number-of-people
+100 * total-mobile-subscribers / number-of-people
 1
 1
 11
@@ -396,9 +492,27 @@ NIL
 10.0
 true
 false
-"ask carriers [\n  set subscribers-count 0\n  set subscribers-last 0\n]" "ask carriers [\n  set subscribers-last subscribers-count\n  set subscribers-count count in-subscriber-neighbors\n]"
+"" ""
 PENS
-"default" 1.0 0 -16777216 true "" "ask carriers [\n  if subscribers-last > 0 [\n    plot-pen-up\n    plotxy (ticks - 1) (100 * subscribers-last / number-of-people)\n    plot-pen-down\n    set-plot-pen-color color\n    plotxy ticks (100 * subscribers-count / number-of-people)\n  ]\n]"
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (100 * subscribers-last / number-of-people)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (100 * subscribers-count / number-of-people)\n]"
+
+PLOT
+965
+320
+1381
+470
+Carriers' current discounts
+NIL
+%
+0.0
+10.0
+0.0
+40.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (ini-current-discount-last)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (ini-current-discount)\n]"
 
 @#$#@#$#@
 ## WHAT IS IT?
