@@ -9,7 +9,7 @@ people-own [
   friends-count
   talkativeness
   
-  monthly-bills
+  monthly-bills-list
   carrier-switch-cost
   willingness-to-switch
   
@@ -60,8 +60,14 @@ to setup
   
   create-mobile-carriers
 
-  layout-radial people friends (person 0)
-  display
+  ;;  Graphics and displays
+  ifelse layout-grouped [
+    display-people-grouped-by-carrier
+  ] [
+    layout-radial people friends (person 0)
+    display
+  ]
+  
   ask people [
     ; Set label for people-nodes to be displayed
     ;set label __variable_here__
@@ -105,6 +111,7 @@ to create-social-network
   ask people [
     set talkativeness random-normal 100 50
     set friends-count count friend-neighbors
+    set monthly-bills-list []
   ]
 end
 
@@ -169,7 +176,10 @@ end
 to go
   ;output-print "\n------------------\n"
   
-  if not any? people with [not any? out-subscriber-neighbors] [ stop ]
+  if not any? people with [not any? out-subscriber-neighbors] [
+    if layout-grouped [repeat 200 [display-people-grouped-by-carrier]] ;; To sort into layout order the last connected subscribers
+    stop
+  ]
   
   customers-make-choices
   
@@ -177,6 +187,7 @@ to go
   
   ; Counters and graphical representation
   color-friend-links-based-on-common-carrier
+  if layout-grouped [display-people-grouped-by-carrier]
   tick
 end
 
@@ -208,9 +219,9 @@ to carriers-make-choices
   
   ; debug - change of discount in the mid-run
   if ticks = 250 [
-    ask one-of carriers with [color = green] [
-      set ini-max-discount 50
-    ]
+    ;ask one-of carriers with [color = green] [
+    ;  set ini-max-discount 50
+    ;]
   ]
 end
 
@@ -219,7 +230,7 @@ end
 to customers-make-choices
   ; Spread network carriers
   ask people with [not any? out-subscriber-neighbors] [
-    let t-talkativeness talkativeness  ; save to temp variable for accessibility
+    let o-self self  ; save self to temp variable "other self"
     
     ;;  Find out about carriers of their friends
     ask carriers [set temp-friends 0]  ; Reset the temporary counting variable of carriers
@@ -231,36 +242,56 @@ to customers-make-choices
         set mobile-friends mobile-friends + 1
       ]
     ]
-    ; Find out the highest number of friends with one carrier
-    let lowest-potential-bill 0
+    ; Find out which carrier will give him the lowest monthly bill
+    let lowest-potential-bill 999999999
     let lowest-potential-carrier 0
+    let current-carrier get-carrier
+    
     ask carriers [
       ; Count potential bill
-      let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out) * t-talkativeness * (discount-multiplier ini-current-discount)
+      let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out)
+                           * [talkativeness] of o-self * (mobile-friends / [friends-count] of o-self)
+                           * (discount-multiplier ini-current-discount)
       
-      if lowest-potential-bill > potential-bill or lowest-potential-bill = 0 [
+      if lowest-potential-bill > potential-bill [
         set lowest-potential-bill potential-bill
         set lowest-potential-carrier self
       ]
-    ]
-    
-    ;;  Subscribe to a carrier, if he wants to.
-    ifelse mobile-friends > 0 [ ; If he has friends using mobile phones
-      ; Weigh his options to join or not to join this month
-      if random 1000 < (10 * mobile-friends / friends-count)  [
-        ; Join the most sensible carrier
-        join-carrier lowest-potential-carrier
-        set ini-discount [ini-current-discount] of lowest-potential-carrier
-        set ini-discount-months DISCOUNT-DURATION
+      
+      ; If this is his actual carrier, add his bill to the monthly-bills-list
+      if current-carrier = self [
+        set monthly-bills-list lput potential-bill monthly-bills-list
+        if length monthly-bills-list > 6 [
+          set monthly-bills-list remove-item 0 monthly-bills-list
+        ]
       ]
     ]
-    [ ; If he does not have friends using mobile phones
-      if random 1000 < 1 [
-        join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
+    
+    
+    ifelse has-carrier [ ; Has a carrier already
+      
+    ]
+    [ ; Does not have a carrier
+      
+      ;;  Subscribe to a carrier, if he wants to.
+      ifelse mobile-friends > 0 [ ; If he has friends using mobile phones
+        ; Weigh his options to join or not to join this month
+        if random 1000 < (10 * mobile-friends / friends-count)  [
+          ; Join the most sensible carrier
+          join-carrier lowest-potential-carrier
+
+          set monthly-bills-list lput lowest-potential-bill monthly-bills-list
+          set ini-discount [ini-current-discount] of lowest-potential-carrier
+          set ini-discount-months DISCOUNT-DURATION
+        ]
+      ]
+      [ ; If he does not have friends using mobile phones
+        if random 1000 < 1 [
+          join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
+        ]
       ]
     ]
   ]
-  
 end
 
 
@@ -287,7 +318,6 @@ to join-carrier [t-carrier]  ; person-turtle method
 end
   
 
-
 to-report avg-friend-count
   let s 0
   ask people [
@@ -296,8 +326,25 @@ to-report avg-friend-count
   report s / count people
 end
 
+
 to-report discount-multiplier [discount]
   report (100 - discount) / 100
+end
+
+
+to display-people-grouped-by-carrier
+    layout-spring people (friends with [color != grey]) 1 1 1
+    display
+end
+
+
+to-report has-carrier  ; Person method
+  report count out-subscriber-neighbors > 0
+end
+
+
+to-report get-carrier  ; Person method
+  report one-of out-subscriber-neighbors
 end
 
 
@@ -309,8 +356,8 @@ end
 
 to debug-test
 ;  output-print "=========="
+  layout-radial people friends one-of people
 end
-
 
 
 
@@ -324,11 +371,11 @@ end
 GRAPHICS-WINDOW
 196
 10
-956
-791
+805
+640
 37
 37
-10.0
+7.99
 1
 10
 1
@@ -374,7 +421,7 @@ number-of-people
 number-of-people
 0
 1000
-1000
+434
 1
 1
 NIL
@@ -406,7 +453,7 @@ number-of-friendships
 number-of-friendships
 0
 1000
-813
+747
 1
 1
 NIL
@@ -479,10 +526,10 @@ NIL
 1
 
 PLOT
-965
+810
 10
-1381
-313
+1077
+183
 Carrier penetration
 NIL
 %
@@ -497,10 +544,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (100 * subscribers-last / number-of-people)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (100 * subscribers-count / number-of-people)\n]"
 
 PLOT
-965
-320
-1381
-470
+811
+190
+1077
+310
 Carriers' current discounts
 NIL
 %
@@ -513,6 +560,34 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (ini-current-discount-last)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (ini-current-discount)\n]"
+
+BUTTON
+9
+708
+188
+741
+Group people by carrier
+display-people-grouped-by-carrier
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+22
+668
+171
+701
+layout-grouped
+layout-grouped
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
