@@ -40,6 +40,8 @@ directed-link-breed [subscribers subscriber]
 globals [
   ; Variables, computed each turn
   total-mobile-subscribers
+  carrier-switches-now
+  carrier-switches-now-average
   
   ; Constants
   DISCOUNT-DURATION
@@ -79,7 +81,7 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
-  set DISCOUNT-DURATION 6
+  set DISCOUNT-DURATION 100
 end
 
 
@@ -135,7 +137,7 @@ to create-mobile-carriers
     set color green
     set price-in 65
     set price-out 200
-    set ini-max-discount 15
+    set ini-max-discount 30
   ]
   
   ; Set common variables
@@ -176,18 +178,23 @@ end
 to go
   ;output-print "\n------------------\n"
   
-  if not any? people with [not any? out-subscriber-neighbors] [
-    if layout-grouped [repeat 200 [display-people-grouped-by-carrier]] ;; To sort into layout order the last connected subscribers
-    stop
-  ]
+  ;if not any? people with [not any? out-subscriber-neighbors] [
+  ;  if layout-grouped [repeat 200 [display-people-grouped-by-carrier]] ;; To sort into layout order the last connected subscribers
+  ;  stop
+  ;]
   
   customers-make-choices
-  
   carriers-make-choices
   
   ; Counters and graphical representation
   color-friend-links-based-on-common-carrier
   if layout-grouped [display-people-grouped-by-carrier]
+  
+  if ticks mod 40 = 0 [
+    set carrier-switches-now-average carrier-switches-now
+    set carrier-switches-now 0
+  ]
+  
   tick
 end
 
@@ -198,6 +205,8 @@ to carriers-make-choices
   ask carriers [
     set subscribers-last subscribers-count
     set subscribers-count count in-subscriber-neighbors
+    
+    if subscribers-count = 0 [die]
   ]
   
   ;;  Set discount levels for each carrier in the initial stage
@@ -205,8 +214,6 @@ to carriers-make-choices
   ifelse total-mobile-subscribers < number-of-people [
     ; Compute global variables
     set total-mobile-subscribers sum [subscribers-count] of carriers
-    ;let smallest-carrier min-one-of carriers [subscribers-count]
-    ;let smallest-carrier-subscribers [subscribers-count] of smallest-carrier
     let smallest-carrier-subscribers min [subscribers-count] of carriers
   
     ask carriers [
@@ -229,8 +236,8 @@ end
 ; ----- Customers make choices ---------------------------------------------------------------------------
 to customers-make-choices
   ; Spread network carriers
-  ask people with [not any? out-subscriber-neighbors] [
-    let o-self self  ; save self to temp variable "other self"
+  ask people [
+    let p-self self  ; save self to temp variable "person self"
     
     ;;  Find out about carriers of their friends
     ask carriers [set temp-friends 0]  ; Reset the temporary counting variable of carriers
@@ -242,34 +249,54 @@ to customers-make-choices
         set mobile-friends mobile-friends + 1
       ]
     ]
+    
+    ; Compute monthly bill, if he is subscribed
+    if has-carrier [
+      let latest-bill 0
+      ask get-carrier [
+        set latest-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out)        ; similar equation is a few rows below
+                             * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
+                             * (get-discount-multiplier [ini-discount] of p-self)
+      ]  
+      set monthly-bills-list lput latest-bill monthly-bills-list
+      if length monthly-bills-list > 6 [
+        set monthly-bills-list remove-item 0 monthly-bills-list
+      ]
+    ]
+    
     ; Find out which carrier will give him the lowest monthly bill
     let lowest-potential-bill 999999999
     let lowest-potential-carrier 0
-    let current-carrier get-carrier
     
     ask carriers [
       ; Count potential bill
-      let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out)
-                           * [talkativeness] of o-self * (mobile-friends / [friends-count] of o-self)
-                           * (discount-multiplier ini-current-discount)
+      let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out)      ; similar equation is a few rows above
+                           * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
+                           * (get-discount-multiplier ini-current-discount)
       
       if lowest-potential-bill > potential-bill [
         set lowest-potential-bill potential-bill
         set lowest-potential-carrier self
       ]
-      
-      ; If this is his actual carrier, add his bill to the monthly-bills-list
-      if current-carrier = self [
-        set monthly-bills-list lput potential-bill monthly-bills-list
-        if length monthly-bills-list > 6 [
-          set monthly-bills-list remove-item 0 monthly-bills-list
-        ]
-      ]
     ]
     
     
     ifelse has-carrier [ ; Has a carrier already
-      
+      ifelse ini-discount-months > 0 [
+        ;; If he has a discount, he can't leave the carrier, shorten the discount by a month
+        set ini-discount-months ini-discount-months - 1
+        if ini-discount-months = 0 [
+          set ini-discount 0
+        ]
+      ] [ ;; He has no discount currently
+        if lowest-potential-bill < get-average-monthly-bill [  ; There is cheaper carrier for him
+          ifelse get-carrier = lowest-potential-carrier [
+            set ini-discount [ini-current-discount] of lowest-potential-carrier
+          ] [
+            change-carrier lowest-potential-carrier
+          ]
+        ]
+      ]
     ]
     [ ; Does not have a carrier
       
@@ -279,10 +306,6 @@ to customers-make-choices
         if random 1000 < (10 * mobile-friends / friends-count)  [
           ; Join the most sensible carrier
           join-carrier lowest-potential-carrier
-
-          set monthly-bills-list lput lowest-potential-bill monthly-bills-list
-          set ini-discount [ini-current-discount] of lowest-potential-carrier
-          set ini-discount-months DISCOUNT-DURATION
         ]
       ]
       [ ; If he does not have friends using mobile phones
@@ -314,11 +337,23 @@ end
 
 to join-carrier [t-carrier]  ; person-turtle method
   create-subscriber-to t-carrier [hide-link]
+
+  set monthly-bills-list []
+  set ini-discount [ini-current-discount] of t-carrier
+  set ini-discount-months DISCOUNT-DURATION
+  
   set color [color] of one-of out-subscriber-neighbors
+end
+
+to change-carrier [t-carrier]  ; Person method
+  ask my-out-subscribers [die] ; Unsubscribe from the old carrier
+  join-carrier t-carrier
+
+  set carrier-switches-now carrier-switches-now + 1
 end
   
 
-to-report avg-friend-count
+to-report get-avg-friend-count
   let s 0
   ask people [
     set s s + count friend-neighbors
@@ -327,7 +362,7 @@ to-report avg-friend-count
 end
 
 
-to-report discount-multiplier [discount]
+to-report get-discount-multiplier [discount]
   report (100 - discount) / 100
 end
 
@@ -347,6 +382,10 @@ to-report get-carrier  ; Person method
   report one-of out-subscriber-neighbors
 end
 
+to-report get-average-monthly-bill  ; Person method
+  report (sum monthly-bills-list) / (length monthly-bills-list)
+end
+
 
 
 ; ----------------------------------------------------------------------------------------------------
@@ -355,8 +394,12 @@ end
 
 
 to debug-test
-;  output-print "=========="
-  layout-radial people friends one-of people
+  ;output-print "=========="
+
+  ask one-of carriers with [color = green] [
+    set price-in 70
+    set price-out 151
+  ]
 end
 
 
@@ -588,6 +631,24 @@ layout-grouped
 0
 1
 -1000
+
+PLOT
+811
+318
+1077
+471
+Carrier switches
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot carrier-switches-now-average"
 
 @#$#@#$#@
 ## WHAT IS IT?
