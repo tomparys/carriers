@@ -10,8 +10,6 @@ people-own [
   talkativeness
   
   monthly-bills-list
-  carrier-switch-cost
-  willingness-to-switch
   
   ini-discount
   ini-discount-months
@@ -43,9 +41,22 @@ globals [
   carrier-switches-now
   carrier-switches-now-average
   
+  ; Stable variables
+  average-friends-count
+  average-income
+  
   ; Constants
   DISCOUNT-DURATION
-  ]
+  MONTHLY-BILLS-COUNT-FOR-AVERAGE
+  PROBABILITY-OF-CHECKING-BETTER-CARRIERS
+  PROBABILITY-COEFFICIENT-FOR-CARRIER-SIGNUP-WITH-FRIENDS
+  PROBABILITY-OF-CARRIER-SIGNUP-ALONE
+  
+  CARRIER-SWITCH-COST-COEFFICIENT
+  
+  ; Counters and graphical representation
+  STATS-SAMPLING-INTERVAL
+]
 
 
 
@@ -60,7 +71,8 @@ to setup
   
   create-social-network
   
-  create-mobile-carriers
+  create-mobile-carrier 1
+  create-mobile-carrier 2
 
   ;;  Graphics and displays
   ifelse layout-grouped [
@@ -81,7 +93,16 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
-  set DISCOUNT-DURATION 100
+  set DISCOUNT-DURATION 30                                                 ; How many ticks does received discount last.
+  set MONTHLY-BILLS-COUNT-FOR-AVERAGE 10                                   ; How many of recent bills are used for averaging.
+  set PROBABILITY-OF-CHECKING-BETTER-CARRIERS 25                           ; per mille (All probability values are per mille.)
+  set PROBABILITY-COEFFICIENT-FOR-CARRIER-SIGNUP-WITH-FRIENDS 100          ; per mille
+  set PROBABILITY-OF-CARRIER-SIGNUP-ALONE 3                                ; per mille
+  
+  set CARRIER-SWITCH-COST-COEFFICIENT 0.5
+  
+  ; Counters and graphical representation
+  set STATS-SAMPLING-INTERVAL 4                                            ; Used for displaying Carrier switches plot
 end
 
 
@@ -111,55 +132,65 @@ to create-social-network
   
   ; Set variables
   ask people [
-    set talkativeness random-normal 100 50
-    set friends-count count friend-neighbors
-    set monthly-bills-list []
+    set income  random-normal 100000 20000
+    set talkativeness  random-normal 100 50
+    set friends-count  count friend-neighbors
+    set monthly-bills-list  []
   ]
+  
+  set average-friends-count  sum [friends-count] of people / count people
+  set average-income  sum [income] of people / count people
 end
 
 
-; ----- Create mobile carriers ---------------------------------------------------------------------------
-to create-mobile-carriers
+; ----- Create next mobile carrier (they are created one by one at any wanted moment) ---------------------------------------------------
+to create-mobile-carrier [id]
   ;;  Create the carriers themselves and set their variables
-  create-carriers 1 [
-    set color blue
-    set price-in 130
-    set price-out 130
-    set ini-max-discount 33
+  let created-carrier 0
+  if id = 1 [
+    create-carriers 1 [
+      set color blue
+      set price-in 131
+      set price-out 131
+      set ini-max-discount 10 ;25
+      set created-carrier self
+    ]
   ]
-  create-carriers 1 [
-    set color red
-    set price-in 100
-    set price-out 150
-    set ini-max-discount 25
+  if id = 2 [
+    create-carriers 1 [
+      set color red
+      set price-in 109
+      set price-out 159
+      set ini-max-discount 12 ;28
+      set created-carrier self
+    ]
   ]
-  create-carriers 1 [
-    set color green
-    set price-in 65
-    set price-out 200
-    set ini-max-discount 30
+  if id = 3 [
+    create-carriers 1 [
+      set color green
+      set price-in 80
+      set price-out 180
+      set ini-max-discount 30
+      set created-carrier self
+    ]
   ]
   
   ; Set common variables
-  ask carriers [
+  ask created-carrier [
     set ini-current-discount ini-max-discount
   ]
   
-  
   ;;  Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
-  ask carriers [
-    let t-carrier self
-    
+  ask created-carrier [
     ask one-of people [
-      join-carrier t-carrier
-      ask friend-neighbors [join-carrier t-carrier]
+      join-carrier created-carrier
+      ask friend-neighbors [join-carrier created-carrier]
     ]
   ]
   
   ; Counters and graphical representation
-  ask carriers [
+  ask created-carrier [
     hide-turtle
-    
     set subscribers-count count in-subscriber-neighbors
     set subscribers-last subscribers-count
     set ini-current-discount-last ini-current-discount
@@ -184,13 +215,16 @@ to go
   ;]
   
   customers-make-choices
+  
+  if ticks = 30 [create-mobile-carrier 3]
+  
   carriers-make-choices
   
   ; Counters and graphical representation
   color-friend-links-based-on-common-carrier
   if layout-grouped [display-people-grouped-by-carrier]
   
-  if ticks mod 40 = 0 [
+  if ticks mod STATS-SAMPLING-INTERVAL = 0 [
     set carrier-switches-now-average carrier-switches-now
     set carrier-switches-now 0
   ]
@@ -259,10 +293,12 @@ to customers-make-choices
                              * (get-discount-multiplier [ini-discount] of p-self)
       ]  
       set monthly-bills-list lput latest-bill monthly-bills-list
-      if length monthly-bills-list > 6 [
+      if length monthly-bills-list > MONTHLY-BILLS-COUNT-FOR-AVERAGE [
         set monthly-bills-list remove-item 0 monthly-bills-list
       ]
     ]
+    
+    ;;  Check to change or subscribe to a new carrier only sometimes
     
     ; Find out which carrier will give him the lowest monthly bill
     let lowest-potential-bill 999999999
@@ -279,8 +315,7 @@ to customers-make-choices
         set lowest-potential-carrier self
       ]
     ]
-    
-    
+      
     ifelse has-carrier [ ; Has a carrier already
       ifelse ini-discount-months > 0 [
         ;; If he has a discount, he can't leave the carrier, shorten the discount by a month
@@ -289,11 +324,23 @@ to customers-make-choices
           set ini-discount 0
         ]
       ] [ ;; He has no discount currently
-        if lowest-potential-bill < get-average-monthly-bill [  ; There is cheaper carrier for him
-          ifelse get-carrier = lowest-potential-carrier [
-            set ini-discount [ini-current-discount] of lowest-potential-carrier
-          ] [
-            change-carrier lowest-potential-carrier
+        ; Check to change or subscribe to a new carrier only sometimes
+        if random 1000 < PROBABILITY-OF-CHECKING-BETTER-CARRIERS [
+          let average-monthly-bill get-average-monthly-bill
+          
+          if lowest-potential-bill < average-monthly-bill [  ; There is cheaper carrier for him
+            ifelse get-carrier = lowest-potential-carrier [
+              set ini-discount [ini-current-discount] of lowest-potential-carrier
+            ] [
+              ; Weigh the decision to change carrier
+              let monthly-savings  average-monthly-bill - lowest-potential-bill
+              let carrier-switch-cost  (friends-count / average-friends-count) * (income / average-income)
+                                          * lowest-potential-bill * CARRIER-SWITCH-COST-COEFFICIENT
+              
+              if 4 * monthly-savings > carrier-switch-cost [
+                change-carrier lowest-potential-carrier
+              ]
+            ]
           ]
         ]
       ]
@@ -303,13 +350,13 @@ to customers-make-choices
       ;;  Subscribe to a carrier, if he wants to.
       ifelse mobile-friends > 0 [ ; If he has friends using mobile phones
         ; Weigh his options to join or not to join this month
-        if random 1000 < (10 * mobile-friends / friends-count)  [
+        if random 1000 < (PROBABILITY-COEFFICIENT-FOR-CARRIER-SIGNUP-WITH-FRIENDS * mobile-friends / friends-count)  [
           ; Join the most sensible carrier
           join-carrier lowest-potential-carrier
         ]
       ]
       [ ; If he does not have friends using mobile phones
-        if random 1000 < 1 [
+        if random 1000 < PROBABILITY-OF-CARRIER-SIGNUP-ALONE [
           join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
         ]
       ]
@@ -397,8 +444,8 @@ to debug-test
   ;output-print "=========="
 
   ask one-of carriers with [color = green] [
-    set price-in 70
-    set price-out 151
+    set price-in 85
+    set price-out 155
   ]
 end
 
@@ -496,7 +543,7 @@ number-of-friendships
 number-of-friendships
 0
 1000
-747
+1000
 1
 1
 NIL
@@ -628,7 +675,7 @@ SWITCH
 701
 layout-grouped
 layout-grouped
-0
+1
 1
 -1000
 
