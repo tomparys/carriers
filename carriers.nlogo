@@ -25,6 +25,7 @@ carriers-own [
   price-out
   ini-max-discount
   ini-current-discount
+  ini-discount-giving-remaining
   
   ; Temp, counters and graphical representation
   subscribers-last
@@ -46,6 +47,7 @@ globals [
   average-income
   
   ; Constants
+  DISCOUNT-GIVING-DURATION
   DISCOUNT-DURATION
   MONTHLY-BILLS-COUNT-FOR-AVERAGE
   PROBABILITY-OF-CHECKING-BETTER-CARRIERS
@@ -72,7 +74,6 @@ to setup
   create-social-network
   
   create-mobile-carrier 1
-  create-mobile-carrier 2
 
   ;;  Graphics and displays
   ifelse layout-grouped [
@@ -93,6 +94,7 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
+  set DISCOUNT-GIVING-DURATION 150                                          ; For how many ticks does Operator give out discounts
   set DISCOUNT-DURATION 30                                                 ; How many ticks does received discount last.
   set MONTHLY-BILLS-COUNT-FOR-AVERAGE 10                                   ; How many of recent bills are used for averaging.
   set PROBABILITY-OF-CHECKING-BETTER-CARRIERS 25                           ; per mille (All probability values are per mille.)
@@ -152,7 +154,7 @@ to create-mobile-carrier [id]
       set color blue
       set price-in 131
       set price-out 131
-      set ini-max-discount 10 ;25
+      set ini-max-discount 0
       set created-carrier self
     ]
   ]
@@ -161,7 +163,7 @@ to create-mobile-carrier [id]
       set color red
       set price-in 109
       set price-out 159
-      set ini-max-discount 12 ;28
+      set ini-max-discount 15
       set created-carrier self
     ]
   ]
@@ -177,7 +179,8 @@ to create-mobile-carrier [id]
   
   ; Set common variables
   ask created-carrier [
-    set ini-current-discount ini-max-discount
+    set ini-discount-giving-remaining  DISCOUNT-GIVING-DURATION
+    set ini-current-discount  ini-max-discount
   ]
   
   ;;  Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
@@ -216,7 +219,9 @@ to go
   
   customers-make-choices
   
-  if ticks = 30 [create-mobile-carrier 3]
+
+  if ticks = 30 [create-mobile-carrier 2]
+  if ticks = 80 [create-mobile-carrier 3]
   
   carriers-make-choices
   
@@ -245,25 +250,22 @@ to carriers-make-choices
   
   ;;  Set discount levels for each carrier in the initial stage
   ask carriers [set ini-current-discount-last ini-current-discount]
-  ifelse total-mobile-subscribers < number-of-people [
+;  ifelse total-mobile-subscribers < number-of-people [
     ; Compute global variables
-    set total-mobile-subscribers sum [subscribers-count] of carriers
-    let smallest-carrier-subscribers min [subscribers-count] of carriers
+;    set total-mobile-subscribers sum [subscribers-count] of carriers
+;    let smallest-carrier-subscribers min [subscribers-count] of carriers
   
-    ask carriers [
-      let need-of-discount ((1 - total-mobile-subscribers / number-of-people)) * ((smallest-carrier-subscribers / subscribers-count))
-      set ini-current-discount min (list ini-max-discount (ini-max-discount * need-of-discount * 2))
+    ask carriers with [ini-discount-giving-remaining >= 0] [
+      let need-of-discount  (ini-discount-giving-remaining / DISCOUNT-GIVING-DURATION) ; * ((smallest-carrier-subscribers / subscribers-count))
+
+      set ini-current-discount  min (list ini-max-discount (ini-max-discount * need-of-discount * 2))
+      
+      set ini-discount-giving-remaining  ini-discount-giving-remaining - 1
     ]
-  ] [
-    ask carriers [set ini-current-discount 0]
-  ]
-  
-  ; debug - change of discount in the mid-run
-  if ticks = 250 [
-    ;ask one-of carriers with [color = green] [
-    ;  set ini-max-discount 50
-    ;]
-  ]
+;  ] [
+;    ask carriers [set ini-current-discount 0]
+;  ]
+;  ]
 end
 
 
