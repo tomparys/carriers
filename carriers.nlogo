@@ -133,14 +133,17 @@ to create-social-network
   ]
   
   ; Set variables
+  ask people [set friends-count  count friend-neighbors]
+  set average-friends-count  sum [friends-count] of people / count people
+
   ask people [
     set income  random-normal 100000 20000
-    set talkativeness  random-normal 100 50
-    set friends-count  count friend-neighbors
+
+    let talkativeness-centre (100 * friends-count / average-friends-count)
+    set talkativeness  random-normal talkativeness-centre (min list (talkativeness-centre / 2) 50)
     set monthly-bills-list  []
   ]
   
-  set average-friends-count  sum [friends-count] of people / count people
   set average-income  sum [income] of people / count people
 end
 
