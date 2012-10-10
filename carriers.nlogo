@@ -1,6 +1,5 @@
-; Used symbolism:
+; Used syntax:
 ;  * variable name "t-carrier" means "the/this carrier in question", such as when passing it to a function, etc.
-;
 
 
 breed [people person]
@@ -94,7 +93,7 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
-  set DISCOUNT-GIVING-DURATION 150                                          ; For how many ticks does Operator give out discounts
+  set DISCOUNT-GIVING-DURATION 150                                         ; For how many ticks does Operator give out discounts
   set DISCOUNT-DURATION 30                                                 ; How many ticks does received discount last.
   set MONTHLY-BILLS-COUNT-FOR-AVERAGE 10                                   ; How many of recent bills are used for averaging.
   set PROBABILITY-OF-CHECKING-BETTER-CARRIERS 25                           ; per mille (All probability values are per mille.)
@@ -215,6 +214,7 @@ end
 to go
   ;output-print "\n------------------\n"
   
+  ;;  Stopping is currently disabled
   ;if not any? people with [not any? out-subscriber-neighbors] [
   ;  if layout-grouped [repeat 200 [display-people-grouped-by-carrier]] ;; To sort into layout order the last connected subscribers
   ;  stop
@@ -453,7 +453,6 @@ to debug-test
     set price-out 155
   ]
 end
-
 
 
 
