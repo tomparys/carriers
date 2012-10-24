@@ -15,10 +15,10 @@ globals [
   carrierSwitchesNowAvg    ; average over the last x turns, used for better plotting
   
   ; Stable variables
-  averageFriendsCount
-  averageFriendsCount-big
-  averageFriendsCount-nBig
-  averageIncome
+  avgFriendsCount
+  avgFriendsCount-big
+  avgFriendsCount-nBig
+  avgIncome
   
   ; Constants
   DISCOUNT_GIVING_DURATION
@@ -185,22 +185,22 @@ end
 ; ----- Setup people (variables, etc.) ---------------------------------------------------------------------------
 to setup-people
   ask people [set friendsCount  count friend-neighbors]
-  set averageFriendsCount  sum [friendsCount] of people / count people
+  set avgFriendsCount  sum [friendsCount] of people / count people
   
-  set averageFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
-  ifelse socialNetworkType = "Naive" [set averageFriendsCount-big 0]
-    [set averageFriendsCount-big  sum [friendsCount] of people with [big] / count people with [big]]
+  set avgFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
+  ifelse socialNetworkType = "Naive" [set avgFriendsCount-big 0]
+    [set avgFriendsCount-big  sum [friendsCount] of people with [big] / count people with [big]]
 
   ask people [
     ;; Values set in czech cents and minutes. Data are roughly aligned with what statistics say about czech mobile phone users.
     set income  random-normal-min 70000 30000 5000
 
-    let talkativenessCentre  (175 * friendsCount / averageFriendsCount)
+    let talkativenessCentre  (175 * friendsCount / avgFriendsCount)
     set talkativeness  random-normal-min talkativenessCentre (talkativenessCentre / 5) 20
     set lMonthlyBills  []
   ]
   
-  set averageIncome  sum [income] of people / count people
+  set avgIncome  sum [income] of people / count people
 end
 
 
@@ -399,7 +399,7 @@ to customers-make-choices
             ] [
               ; Weigh the decision to change carrier
               let monthlySavings  avgMonthlyBill - lowestPotentialBill
-              let carrierSwitchCost  (friendsCount / averageFriendsCount) * (income / averageIncome)
+              let carrierSwitchCost  (friendsCount / avgFriendsCount) * (income / avgIncome)
                                           * lowestPotentialBill * CARRIER_SWITCH_COST_COEF
               
               if 4 * monthlySavings > carrierSwitchCost [
@@ -519,7 +519,6 @@ to debug-test
     set priceOut 155
   ]
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 196
@@ -625,10 +624,10 @@ Setup variables
 1
 
 MONITOR
-811
-478
-939
-523
+332
+698
+460
+743
 Carrier customers
 totalMobileSubscribers
 17
@@ -636,10 +635,10 @@ totalMobileSubscribers
 11
 
 MONITOR
-949
-478
-1077
-523
+331
+749
+459
+794
 Carrier penetration (%)
 100 * totalMobileSubscribers / nOfPeople
 1
@@ -731,7 +730,7 @@ PLOT
 811
 318
 1077
-471
+444
 Carrier switches
 NIL
 NIL
@@ -761,7 +760,7 @@ MONITOR
 326
 744
 avg friends big
-precision averageFriendsCount-big 3
+precision avgFriendsCount-big 3
 17
 1
 11
@@ -772,7 +771,7 @@ MONITOR
 325
 795
 avg friends nbig
-precision averageFriendsCount-nBig 3
+precision avgFriendsCount-nBig 3
 17
 1
 11
