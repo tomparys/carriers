@@ -4,6 +4,7 @@
 
 breed [people person]
 people-own [
+  big    ; true/false, helper for two-circle social network
   income
   friends-count
   talkativeness
@@ -43,6 +44,8 @@ globals [
   
   ; Stable variables
   average-friends-count
+  average-friends-count-big
+  average-friends-count-nbig
   average-income
   
   ; Constants
@@ -70,23 +73,17 @@ to setup
   clear-all
   set-constants
   
-  create-social-network
+  ;; Create social network
+  ifelse social-network-type = "Two-Circles" [
+    create-social-network-two-circles
+  ] [
+    create-social-network-naive
+  ]
+  setup-people
   
+  ;; Create first mobile carrier
   create-mobile-carrier 1
 
-  ;;  Graphics and displays
-  ifelse layout-grouped [
-    display-people-grouped-by-carrier
-  ] [
-    layout-radial people friends (person 0)
-    display
-  ]
-  
-  ask people [
-    ; Set label for people-nodes to be displayed
-    ;set label __variable_here__
-  ]
-  
   reset-ticks
 end
 
@@ -107,33 +104,82 @@ to set-constants
 end
 
 
-; ----- Create social network ---------------------------------------------------------------------------
-to create-social-network
+; ----- Create social network - Two Circles ---------------------------------------------------------------------------
+to create-social-network-two-circles
+  ;; Constants
+  let Bigs% 30
+  let bigReach 30
+  let allReach 18
+  
+  let nOfBigs Bigs% * nOfPeople / 100
+  let nOfSmalls nOfPeople - nOfBigs
+  
+  ; Prepare the environment
+  ask patches [set pcolor white]
+  
+  ;; Create people
+  create-people nOfPeople
+  ask people [
+    set big false
+    set shape "person"
+    set color black
+    set size 5
+    setxy random-pxcor random-pycor
+    while [any? other turtles-here] [fd 1]
+  ]
+  ask n-of nOfBigs people [
+    set big true
+    set size 7
+  ]
+  
+  ;; Create friendships
+  ask people with [big]  ; links big-big
+    [create-friends-with other people with [big] in-radius bigReach]  ;;  [set color black]
+  ask people  ; links big-small, s-b, s-s
+    [create-friends-with other people with [not big] in-radius allReach] ;; [set color grey]
+
+end
+
+
+; ----- Create social network - Naive ---------------------------------------------------------------------------
+to create-social-network-naive
+  ;; Constants for creation of the network
+  let number-of-friendships nOfPeople * 2
+  
   set-default-shape people "circle"
   
   ; Create each person
-  repeat number-of-people [
-    create-people 1 [set color grey]
-  ]
+  create-people nOfPeople [set color grey]
   
   ; Create the first friendship
-  ask one-of people [
-    create-friend-with one-of other people
-  ]
+  ask one-of people [create-friend-with one-of other people]
+  
   ; Create a friendship tree - each person will have at least 1 friendship
-  ask people [
-    create-friend-with one-of other people with [count friend-neighbors > 0]
-  ]
+  ask people [create-friend-with one-of other people with [count friend-neighbors > 0]]
+  
   ; Create preset number of friendships above the necessary minimum created above
   repeat number-of-friendships [
-    ask one-of people [
-      create-friend-with one-of other people
-    ]
+    ask one-of people [create-friend-with one-of other people]
   ]
   
+  ;;  Graphics and displays
+  ask people [set size 5]
+  ifelse layout-grouped [
+    display-people-grouped-by-carrier
+  ] [
+    layout-radial people friends (person 0)
+    display
+  ]
+end
+
+
+; ----- Setup people (variables, etc.) ---------------------------------------------------------------------------
+to setup-people
   ; Set variables
   ask people [set friends-count  count friend-neighbors]
   set average-friends-count  sum [friends-count] of people / count people
+  set average-friends-count-big  sum [friends-count] of people with [big] / count people with [big]
+  set average-friends-count-nbig  sum [friends-count] of people with [not big] / count people with [not big]
 
   ask people [
     set income  random-normal 100000 20000
@@ -471,24 +517,24 @@ end
 GRAPHICS-WINDOW
 196
 10
-805
-640
-37
-37
-7.99
+799
+634
+157
+157
+1.883
 1
-10
+1
 1
 1
 1
 0
-0
-0
 1
--37
-37
--37
-37
+1
+1
+-157
+157
+-157
+157
 1
 1
 1
@@ -496,10 +542,10 @@ ticks
 30.0
 
 BUTTON
-39
-162
-152
-195
+38
+76
+151
+109
 Go
 go
 T
@@ -513,25 +559,25 @@ NIL
 1
 
 SLIDER
-10
-40
-191
-73
-number-of-people
-number-of-people
-0
+7
+216
+188
+249
+nOfPeople
+nOfPeople
+500
+1500
 1000
-434
-1
+10
 1
 NIL
 HORIZONTAL
 
 BUTTON
-39
-122
-152
-155
+38
+36
+151
+69
 NIL
 setup
 NIL
@@ -544,26 +590,11 @@ NIL
 NIL
 1
 
-SLIDER
-10
-78
-191
-111
-number-of-friendships
-number-of-friendships
-0
-1000
-1000
-1
-1
-NIL
-HORIZONTAL
-
 BUTTON
-39
-202
-152
-235
+38
+116
+151
+149
 Go once
 go
 NIL
@@ -587,10 +618,10 @@ Setup variables
 1
 
 MONITOR
-37
-252
-165
-297
+811
+478
+939
+523
 Carrier customers
 ;count people with [count out-subscriber-neighbors > 0]\ntotal-mobile-subscribers
 17
@@ -598,21 +629,21 @@ Carrier customers
 11
 
 MONITOR
-37
-306
-165
-351
+948
+479
+1076
+524
 Carrier penetration (%)
-100 * total-mobile-subscribers / number-of-people
+100 * total-mobile-subscribers / nOfPeople
 1
 1
 11
 
 BUTTON
-34
-758
-177
-791
+931
+761
+1074
+794
 Debug test button
 debug-test
 NIL
@@ -641,7 +672,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (100 * subscribers-last / number-of-people)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (100 * subscribers-count / number-of-people)\n]"
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (100 * subscribers-last / nOfPeople)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (100 * subscribers-count / nOfPeople)\n]"
 
 PLOT
 811
@@ -662,10 +693,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (ini-current-discount-last)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (ini-current-discount)\n]"
 
 BUTTON
-9
-708
-188
-741
+12
+758
+191
+791
 Group people by carrier
 display-people-grouped-by-carrier
 T
@@ -679,10 +710,10 @@ NIL
 1
 
 SWITCH
-22
-668
-171
-701
+25
+718
+174
+751
 layout-grouped
 layout-grouped
 1
@@ -706,6 +737,38 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot carrier-switches-now-average"
+
+CHOOSER
+24
+164
+171
+209
+social-network-type
+social-network-type
+"Two-Circles" "Naive"
+0
+
+MONITOR
+200
+695
+304
+740
+avg friends big
+precision average-friends-count-big 3
+17
+1
+11
+
+MONITOR
+201
+746
+303
+791
+avg friends nbig
+precision average-friends-count-nbig 3
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
