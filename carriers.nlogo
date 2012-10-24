@@ -293,9 +293,14 @@ to customers-make-choices
     if has-carrier [
       let latest-bill 0
       ask get-carrier [
-        set latest-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out)        ; similar equation is a few rows below
+        ifelse mobile-friends > 0 [
+          set latest-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out) / mobile-friends
                              * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
-                             * (get-discount-multiplier [ini-discount] of p-self)
+                             * (get-discount-multiplier [ini-discount] of p-self)                              ; similar equation is a few rows below
+        ] [
+          ;; TODO - monthly bill if he has no friends              -- TODO
+          set latest-bill 0
+        ]
       ]  
       set monthly-bills-list lput latest-bill monthly-bills-list
       if length monthly-bills-list > MONTHLY-BILLS-COUNT-FOR-AVERAGE [
@@ -309,15 +314,17 @@ to customers-make-choices
     let lowest-potential-bill 999999999
     let lowest-potential-carrier 0
     
-    ask carriers [
-      ; Count potential bill
-      let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out)      ; similar equation is a few rows above
-                           * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
-                           * (get-discount-multiplier ini-current-discount)
+    if mobile-friends > 0 [
+      ask carriers [
+        ; Count potential bill
+        let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out) / mobile-friends
+                             * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
+                             * (get-discount-multiplier ini-current-discount)                                  ; similar equation is a few rows above
       
-      if lowest-potential-bill > potential-bill [
-        set lowest-potential-bill potential-bill
-        set lowest-potential-carrier self
+        if lowest-potential-bill > potential-bill [
+          set lowest-potential-bill potential-bill
+          set lowest-potential-carrier self
+        ]
       ]
     ]
       
@@ -453,7 +460,6 @@ to debug-test
     set price-out 155
   ]
 end
-
 
 
 
