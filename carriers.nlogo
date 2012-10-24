@@ -1,5 +1,11 @@
 ; Used syntax:
-;  * variable name "tCarrier" means "the/this/temp carrier in question", such as when passing it to a function, etc.
+;  * Variable names of style "tCarrier" means "the/this/temp carrier in question", such as when passing it to a function, etc.
+;        - similarly: l - list, n - number, p - person/probability
+;  * Abbreviations: probability (prob), coefficient (coef), average (avg)
+
+; Notes:
+;   * Probabilities are usually given per mille (X in a 1000 chance)
+;   * Prices are approximately measured in cents of CZK (halire)
 
 
 globals [
@@ -45,7 +51,8 @@ people-own [
 
 breed [carriers carrier]
 carriers-own [
-  subscribersCount
+  revenue        ; current monthly revenue
+  totalRevenue   ; sum/total revenue ever gotten
   
   priceIn
   priceOut
@@ -54,6 +61,7 @@ carriers-own [
   iniDiscountGivingRemaining
   
   ; Temp, counters and graphical representation
+  subscribersCount
   subscribersCount-last
   iniCurrentDiscount-last
   tFriends     ; temporary count of friends
@@ -88,17 +96,17 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
-  set DISCOUNT_GIVING_DURATION 150                                         ; For how many ticks does Operator give out discounts
-  set DISCOUNT_DURATION 30                                                 ; How many ticks does received discount last.
-  set MONTHLY_BILLS_COUNT-FOR_AVG 10                                   ; How many of recent bills are used for averaging.
-  set PROB_CHECKING_BETTER_CARRIERS 25                           ; per mille (All probability values are per mille.)
-  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS 100          ; per mille
-  set PROB_CARRIER_SIGNUP_ALONE 3                                ; per mille
-  
-  set CARRIER_SWITCH_COST_COEF 0.5
+  set DISCOUNT_GIVING_DURATION  150                                         ; For how many ticks does Operator give out discounts
+  set DISCOUNT_DURATION  30                                                 ; How many ticks does received discount last.
+  set MONTHLY_BILLS_COUNT-FOR_AVG  10                                       ; How many of recent bills are used for averaging.
+  set PROB_CHECKING_BETTER_CARRIERS  25                                     ; per mille (All probability values are per mille.)
+  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  100                            ; per mille
+  set PROB_CARRIER_SIGNUP_ALONE  3                                          ; per mille
+
+  set CARRIER_SWITCH_COST_COEF  0.5
   
   ; Counters and graphical representation
-  set STATS_SAMPLING_INTERVAL 4                                            ; Used for displaying Carrier switches plot
+  set STATS_SAMPLING_INTERVAL  4                                            ; Used for displaying Carrier switches plot
 end
 
 
@@ -176,18 +184,19 @@ end
 
 ; ----- Setup people (variables, etc.) ---------------------------------------------------------------------------
 to setup-people
-  ; Set variables
   ask people [set friendsCount  count friend-neighbors]
   set averageFriendsCount  sum [friendsCount] of people / count people
+  
+  set averageFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
   ifelse socialNetworkType = "Naive" [set averageFriendsCount-big 0]
     [set averageFriendsCount-big  sum [friendsCount] of people with [big] / count people with [big]]
-  set averageFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
 
   ask people [
-    set income  random-normal 100000 20000
+    ;; Values set in czech cents and minutes. Data are roughly aligned with what statistics say about czech mobile phone users.
+    set income  random-normal-min 70000 30000 5000
 
-    let talkativenessCentre  (100 * friendsCount / averageFriendsCount)
-    set talkativeness  random-normal talkativenessCentre (min list (talkativenessCentre / 2) 50)
+    let talkativenessCentre  (175 * friendsCount / averageFriendsCount)
+    set talkativeness  random-normal-min talkativenessCentre (talkativenessCentre / 5) 20
     set lMonthlyBills  []
   ]
   
@@ -425,6 +434,12 @@ end
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Helper methods -------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------
+
+to-report random-normal-min [meanValue standardDeviation minimum]
+  let r  random-normal meanValue standardDeviation
+  ifelse r > minimum [report r]
+    [report minimum]
+end
 
 
 to color-friend-links-based-on-common-carrier
