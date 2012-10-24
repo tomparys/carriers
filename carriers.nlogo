@@ -1,66 +1,67 @@
 ; Used syntax:
-;  * variable name "t-carrier" means "the/this carrier in question", such as when passing it to a function, etc.
+;  * variable name "tCarrier" means "the/this/temp carrier in question", such as when passing it to a function, etc.
+
+
+globals [
+  ; Variables, computed each turn
+  totalMobileSubscribers
+  carrierSwitchesNow
+  carrierSwitchesNowAvg    ; average over the last x turns, used for better plotting
+  
+  ; Stable variables
+  averageFriendsCount
+  averageFriendsCount-big
+  averageFriendsCount-nBig
+  averageIncome
+  
+  ; Constants
+  DISCOUNT_GIVING_DURATION
+  DISCOUNT_DURATION
+  MONTHLY_BILLS_COUNT-FOR_AVG
+  PROB_CHECKING_BETTER_CARRIERS
+  PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS
+  PROB_CARRIER_SIGNUP_ALONE
+  
+  CARRIER_SWITCH_COST_COEF
+  
+  ; Counters and graphical representation
+  STATS_SAMPLING_INTERVAL
+]
 
 
 breed [people person]
 people-own [
   big    ; true/false, helper for two-circle social network
   income
-  friends-count
+  friendsCount
   talkativeness
   
-  monthly-bills-list
+  lMonthlyBills  ; list of monthly bills
   
-  ini-discount
-  ini-discount-months
-  
-  ; Temp, counters and graphical representation
+  iniDiscount
+  iniDiscountMonths
 ]
+
 
 breed [carriers carrier]
 carriers-own [
-  subscribers-count
+  subscribersCount
   
-  price-in
-  price-out
-  ini-max-discount
-  ini-current-discount
-  ini-discount-giving-remaining
+  priceIn
+  priceOut
+  iniMaxDiscount
+  iniCurrentDiscount
+  iniDiscountGivingRemaining
   
   ; Temp, counters and graphical representation
-  subscribers-last
-  ini-current-discount-last
-  temp-friends
+  subscribersCount-last
+  iniCurrentDiscount-last
+  tFriends     ; temporary count of friends
 ]
+
 
 undirected-link-breed [friends friend]
 directed-link-breed [subscribers subscriber]
-
-globals [
-  ; Variables, computed each turn
-  total-mobile-subscribers
-  carrier-switches-now
-  carrier-switches-now-average
-  
-  ; Stable variables
-  average-friends-count
-  average-friends-count-big
-  average-friends-count-nbig
-  average-income
-  
-  ; Constants
-  DISCOUNT-GIVING-DURATION
-  DISCOUNT-DURATION
-  MONTHLY-BILLS-COUNT-FOR-AVERAGE
-  PROBABILITY-OF-CHECKING-BETTER-CARRIERS
-  PROBABILITY-COEFFICIENT-FOR-CARRIER-SIGNUP-WITH-FRIENDS
-  PROBABILITY-OF-CARRIER-SIGNUP-ALONE
-  
-  CARRIER-SWITCH-COST-COEFFICIENT
-  
-  ; Counters and graphical representation
-  STATS-SAMPLING-INTERVAL
-]
 
 
 
@@ -74,11 +75,8 @@ to setup
   set-constants
   
   ;; Create social network
-  ifelse social-network-type = "Two-Circles" [
-    create-social-network-two-circles
-  ] [
-    create-social-network-naive
-  ]
+  ifelse socialNetworkType = "Two-Circles" [create-social-network-two-circles]
+    [create-social-network-naive]
   setup-people
   
   ;; Create first mobile carrier
@@ -90,17 +88,17 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
-  set DISCOUNT-GIVING-DURATION 150                                         ; For how many ticks does Operator give out discounts
-  set DISCOUNT-DURATION 30                                                 ; How many ticks does received discount last.
-  set MONTHLY-BILLS-COUNT-FOR-AVERAGE 10                                   ; How many of recent bills are used for averaging.
-  set PROBABILITY-OF-CHECKING-BETTER-CARRIERS 25                           ; per mille (All probability values are per mille.)
-  set PROBABILITY-COEFFICIENT-FOR-CARRIER-SIGNUP-WITH-FRIENDS 100          ; per mille
-  set PROBABILITY-OF-CARRIER-SIGNUP-ALONE 3                                ; per mille
+  set DISCOUNT_GIVING_DURATION 150                                         ; For how many ticks does Operator give out discounts
+  set DISCOUNT_DURATION 30                                                 ; How many ticks does received discount last.
+  set MONTHLY_BILLS_COUNT-FOR_AVG 10                                   ; How many of recent bills are used for averaging.
+  set PROB_CHECKING_BETTER_CARRIERS 25                           ; per mille (All probability values are per mille.)
+  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS 100          ; per mille
+  set PROB_CARRIER_SIGNUP_ALONE 3                                ; per mille
   
-  set CARRIER-SWITCH-COST-COEFFICIENT 0.5
+  set CARRIER_SWITCH_COST_COEF 0.5
   
   ; Counters and graphical representation
-  set STATS-SAMPLING-INTERVAL 4                                            ; Used for displaying Carrier switches plot
+  set STATS_SAMPLING_INTERVAL 4                                            ; Used for displaying Carrier switches plot
 end
 
 
@@ -144,12 +142,15 @@ end
 ; ----- Create social network - Naive ---------------------------------------------------------------------------
 to create-social-network-naive
   ;; Constants for creation of the network
-  let number-of-friendships nOfPeople * 2
+  let nFriendships nOfPeople * 2
   
   set-default-shape people "circle"
   
   ; Create each person
-  create-people nOfPeople [set color grey]
+  create-people nOfPeople [
+    set color grey
+    set big false
+  ]
   
   ; Create the first friendship
   ask one-of people [create-friend-with one-of other people]
@@ -158,13 +159,13 @@ to create-social-network-naive
   ask people [create-friend-with one-of other people with [count friend-neighbors > 0]]
   
   ; Create preset number of friendships above the necessary minimum created above
-  repeat number-of-friendships [
+  repeat nFriendships [
     ask one-of people [create-friend-with one-of other people]
   ]
   
   ;;  Graphics and displays
   ask people [set size 5]
-  ifelse layout-grouped [
+  ifelse naiveSN-layoutGrouped [
     display-people-grouped-by-carrier
   ] [
     layout-radial people friends (person 0)
@@ -176,75 +177,76 @@ end
 ; ----- Setup people (variables, etc.) ---------------------------------------------------------------------------
 to setup-people
   ; Set variables
-  ask people [set friends-count  count friend-neighbors]
-  set average-friends-count  sum [friends-count] of people / count people
-  set average-friends-count-big  sum [friends-count] of people with [big] / count people with [big]
-  set average-friends-count-nbig  sum [friends-count] of people with [not big] / count people with [not big]
+  ask people [set friendsCount  count friend-neighbors]
+  set averageFriendsCount  sum [friendsCount] of people / count people
+  ifelse socialNetworkType = "Naive" [set averageFriendsCount-big 0]
+    [set averageFriendsCount-big  sum [friendsCount] of people with [big] / count people with [big]]
+  set averageFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
 
   ask people [
     set income  random-normal 100000 20000
 
-    let talkativeness-centre (100 * friends-count / average-friends-count)
-    set talkativeness  random-normal talkativeness-centre (min list (talkativeness-centre / 2) 50)
-    set monthly-bills-list  []
+    let talkativenessCentre  (100 * friendsCount / averageFriendsCount)
+    set talkativeness  random-normal talkativenessCentre (min list (talkativenessCentre / 2) 50)
+    set lMonthlyBills  []
   ]
   
-  set average-income  sum [income] of people / count people
+  set averageIncome  sum [income] of people / count people
 end
 
 
 ; ----- Create next mobile carrier (they are created one by one at any wanted moment) ---------------------------------------------------
 to create-mobile-carrier [id]
   ;;  Create the carriers themselves and set their variables
-  let created-carrier 0
+  let tCarrier 0
   if id = 1 [
     create-carriers 1 [
       set color blue
-      set price-in 131
-      set price-out 131
-      set ini-max-discount 0
-      set created-carrier self
+      set priceIn 131
+      set priceOut 131
+      set iniMaxDiscount 0
+      set tCarrier self
     ]
   ]
   if id = 2 [
     create-carriers 1 [
       set color red
-      set price-in 109
-      set price-out 159
-      set ini-max-discount 15
-      set created-carrier self
+      set priceIn 109
+      set priceOut 159
+      set iniMaxDiscount 15
+      set tCarrier self
     ]
   ]
   if id = 3 [
     create-carriers 1 [
       set color green
-      set price-in 80
-      set price-out 180
-      set ini-max-discount 30
-      set created-carrier self
+      set priceIn 80
+      set priceOut 180
+      set iniMaxDiscount 30
+      set tCarrier self
     ]
   ]
   
   ; Set common variables
-  ask created-carrier [
-    set ini-discount-giving-remaining  DISCOUNT-GIVING-DURATION
-    set ini-current-discount  ini-max-discount
+  ask tCarrier [
+    set iniDiscountGivingRemaining  DISCOUNT_GIVING_DURATION
+    set iniCurrentDiscount  iniMaxDiscount
   ]
   
   ;;  Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
-  ask created-carrier [
+  ask tCarrier [
     ask one-of people [
-      join-carrier created-carrier
-      ask friend-neighbors [join-carrier created-carrier]
+      join-carrier tCarrier
+      ask friend-neighbors [join-carrier tCarrier]
     ]
   ]
   
   ; Counters and graphical representation
-  ask created-carrier [
+  ask tCarrier [
     hide-turtle
-    set subscribers-count count in-subscriber-neighbors
-    set subscribers-last subscribers-count
-    set ini-current-discount-last ini-current-discount
+    set subscribersCount count in-subscriber-neighbors
+    set subscribersCount-last subscribersCount
+    set iniCurrentDiscount-last iniCurrentDiscount
   ]
   color-friend-links-based-on-common-carrier
 end
@@ -276,12 +278,16 @@ to go
   
   ; Counters and graphical representation
   color-friend-links-based-on-common-carrier
-  if layout-grouped [display-people-grouped-by-carrier]
+  if socialNetworkType = "Naive" and naiveSN-layoutGrouped [display-people-grouped-by-carrier]
   
-  if ticks mod STATS-SAMPLING-INTERVAL = 0 [
-    set carrier-switches-now-average carrier-switches-now
-    set carrier-switches-now 0
+  if ticks mod STATS_SAMPLING_INTERVAL = 0 [
+    set carrierSwitchesNowAvg carrierSwitchesNow
+    set carrierSwitchesNow 0
+  ] 
+  if totalMobileSubscribers < nOfPeople [
+    set totalMobileSubscribers  count people with [count out-subscriber-neighbors > 0]
   ]
+    
   
   tick
 end
@@ -291,30 +297,22 @@ end
 to carriers-make-choices
   ; Count subscribers
   ask carriers [
-    set subscribers-last subscribers-count
-    set subscribers-count count in-subscriber-neighbors
+    set subscribersCount-last subscribersCount
+    set subscribersCount count in-subscriber-neighbors
     
-    if subscribers-count = 0 [die]
+    if subscribersCount = 0 [die]
   ]
   
   ;;  Set discount levels for each carrier in the initial stage
-  ask carriers [set ini-current-discount-last ini-current-discount]
-;  ifelse total-mobile-subscribers < number-of-people [
+  ask carriers [set iniCurrentDiscount-last iniCurrentDiscount]
     ; Compute global variables
-;    set total-mobile-subscribers sum [subscribers-count] of carriers
-;    let smallest-carrier-subscribers min [subscribers-count] of carriers
-  
-    ask carriers with [ini-discount-giving-remaining >= 0] [
-      let need-of-discount  (ini-discount-giving-remaining / DISCOUNT-GIVING-DURATION) ; * ((smallest-carrier-subscribers / subscribers-count))
+    ask carriers with [iniDiscountGivingRemaining >= 0] [
+      let needOfDiscount  (iniDiscountGivingRemaining / DISCOUNT_GIVING_DURATION) ; * ((smallest-carrier-subscribers / subscribersCount))
 
-      set ini-current-discount  min (list ini-max-discount (ini-max-discount * need-of-discount * 2))
+      set iniCurrentDiscount  min (list iniMaxDiscount (iniMaxDiscount * needOfDiscount * 2))
       
-      set ini-discount-giving-remaining  ini-discount-giving-remaining - 1
+      set iniDiscountGivingRemaining  iniDiscountGivingRemaining - 1
     ]
-;  ] [
-;    ask carriers [set ini-current-discount 0]
-;  ]
-;  ]
 end
 
 
@@ -322,81 +320,81 @@ end
 to customers-make-choices
   ; Spread network carriers
   ask people [
-    let p-self self  ; save self to temp variable "person self"
+    let pSelf self  ; save self to temp variable "person self"
     
     ;;  Find out about carriers of their friends
-    ask carriers [set temp-friends 0]  ; Reset the temporary counting variable of carriers
-    let mobile-friends 0  ; Temp variable counting how many his friends have mobile phones
+    ask carriers [set tFriends 0]  ; Reset the temporary counting variable of carriers
+    let mobileFriends 0  ; Temp variable counting how many his friends have mobile phones
     ; Sum carriers of friends into temporary count variables
     ask friend-neighbors [
       ask out-subscriber-neighbors [
-        set temp-friends temp-friends + 1
-        set mobile-friends mobile-friends + 1
+        set tFriends tFriends + 1
+        set mobileFriends mobileFriends + 1
       ]
     ]
     
     ; Compute monthly bill, if he is subscribed
     if has-carrier [
-      let latest-bill 0
+      let latestBill 0
       ask get-carrier [
-        ifelse mobile-friends > 0 [
-          set latest-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out) / mobile-friends
-                             * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
-                             * (get-discount-multiplier [ini-discount] of p-self)                              ; similar equation is a few rows below
+        ifelse mobileFriends > 0 [
+          set latestBill (tFriends * priceIn + (mobileFriends - tFriends) * priceOut) / mobileFriends
+                             * [talkativeness] of pSelf * (mobileFriends / [friendsCount] of pSelf)
+                             * (get-discount-multiplier [iniDiscount] of pSelf)                              ; similar equation is a few rows below
         ] [
           ;; TODO - monthly bill if he has no friends              -- TODO
-          set latest-bill 0
+          set latestBill 0
         ]
       ]  
-      set monthly-bills-list lput latest-bill monthly-bills-list
-      if length monthly-bills-list > MONTHLY-BILLS-COUNT-FOR-AVERAGE [
-        set monthly-bills-list remove-item 0 monthly-bills-list
+      set lMonthlyBills lput latestBill lMonthlyBills
+      if length lMonthlyBills > MONTHLY_BILLS_COUNT-FOR_AVG [
+        set lMonthlyBills remove-item 0 lMonthlyBills
       ]
     ]
     
     ;;  Check to change or subscribe to a new carrier only sometimes
     
     ; Find out which carrier will give him the lowest monthly bill
-    let lowest-potential-bill 999999999
-    let lowest-potential-carrier 0
+    let lowestPotentialBill 999999999
+    let lowestPotentialCarrier 0
     
-    if mobile-friends > 0 [
+    if mobileFriends > 0 [
       ask carriers [
         ; Count potential bill
-        let potential-bill (temp-friends * price-in + (mobile-friends - temp-friends) * price-out) / mobile-friends
-                             * [talkativeness] of p-self * (mobile-friends / [friends-count] of p-self)
-                             * (get-discount-multiplier ini-current-discount)                                  ; similar equation is a few rows above
+        let potentialBill (tFriends * priceIn + (mobileFriends - tFriends) * priceOut) / mobileFriends
+                             * [talkativeness] of pSelf * (mobileFriends / [friendsCount] of pSelf)
+                             * (get-discount-multiplier iniCurrentDiscount)                                  ; similar equation is a few rows above
       
-        if lowest-potential-bill > potential-bill [
-          set lowest-potential-bill potential-bill
-          set lowest-potential-carrier self
+        if lowestPotentialBill > potentialBill [
+          set lowestPotentialBill potentialBill
+          set lowestPotentialCarrier self
         ]
       ]
     ]
       
     ifelse has-carrier [ ; Has a carrier already
-      ifelse ini-discount-months > 0 [
+      ifelse iniDiscountMonths > 0 [
         ;; If he has a discount, he can't leave the carrier, shorten the discount by a month
-        set ini-discount-months ini-discount-months - 1
-        if ini-discount-months = 0 [
-          set ini-discount 0
+        set iniDiscountMonths iniDiscountMonths - 1
+        if iniDiscountMonths = 0 [
+          set iniDiscount 0
         ]
       ] [ ;; He has no discount currently
         ; Check to change or subscribe to a new carrier only sometimes
-        if random 1000 < PROBABILITY-OF-CHECKING-BETTER-CARRIERS [
-          let average-monthly-bill get-average-monthly-bill
+        if random 1000 < PROB_CHECKING_BETTER_CARRIERS [
+          let avgMonthlyBill get-avgMonthlyBill
           
-          if lowest-potential-bill < average-monthly-bill [  ; There is cheaper carrier for him
-            ifelse get-carrier = lowest-potential-carrier [
-              set ini-discount [ini-current-discount] of lowest-potential-carrier
+          if lowestPotentialBill < avgMonthlyBill [  ; There is cheaper carrier for him
+            ifelse get-carrier = lowestPotentialCarrier [
+              set iniDiscount [iniCurrentDiscount] of lowestPotentialCarrier
             ] [
               ; Weigh the decision to change carrier
-              let monthly-savings  average-monthly-bill - lowest-potential-bill
-              let carrier-switch-cost  (friends-count / average-friends-count) * (income / average-income)
-                                          * lowest-potential-bill * CARRIER-SWITCH-COST-COEFFICIENT
+              let monthlySavings  avgMonthlyBill - lowestPotentialBill
+              let carrierSwitchCost  (friendsCount / averageFriendsCount) * (income / averageIncome)
+                                          * lowestPotentialBill * CARRIER_SWITCH_COST_COEF
               
-              if 4 * monthly-savings > carrier-switch-cost [
-                change-carrier lowest-potential-carrier
+              if 4 * monthlySavings > carrierSwitchCost [
+                change-carrier lowestPotentialCarrier
               ]
             ]
           ]
@@ -406,15 +404,15 @@ to customers-make-choices
     [ ; Does not have a carrier
       
       ;;  Subscribe to a carrier, if he wants to.
-      ifelse mobile-friends > 0 [ ; If he has friends using mobile phones
+      ifelse mobileFriends > 0 [ ; If he has friends using mobile phones
         ; Weigh his options to join or not to join this month
-        if random 1000 < (PROBABILITY-COEFFICIENT-FOR-CARRIER-SIGNUP-WITH-FRIENDS * mobile-friends / friends-count)  [
+        if random 1000 < (PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS * mobileFriends / friendsCount)  [
           ; Join the most sensible carrier
-          join-carrier lowest-potential-carrier
+          join-carrier lowestPotentialCarrier
         ]
       ]
       [ ; If he does not have friends using mobile phones
-        if random 1000 < PROBABILITY-OF-CARRIER-SIGNUP-ALONE [
+        if random 1000 < PROB_CARRIER_SIGNUP_ALONE [
           join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
         ]
       ]
@@ -443,9 +441,9 @@ end
 to join-carrier [t-carrier]  ; person-turtle method
   create-subscriber-to t-carrier [hide-link]
 
-  set monthly-bills-list []
-  set ini-discount [ini-current-discount] of t-carrier
-  set ini-discount-months DISCOUNT-DURATION
+  set lMonthlyBills []
+  set iniDiscount [iniCurrentDiscount] of t-carrier
+  set iniDiscountMonths DISCOUNT_DURATION
   
   set color [color] of one-of out-subscriber-neighbors
 end
@@ -454,7 +452,7 @@ to change-carrier [t-carrier]  ; Person method
   ask my-out-subscribers [die] ; Unsubscribe from the old carrier
   join-carrier t-carrier
 
-  set carrier-switches-now carrier-switches-now + 1
+  set carrierSwitchesNow carrierSwitchesNow + 1
 end
   
 
@@ -487,8 +485,8 @@ to-report get-carrier  ; Person method
   report one-of out-subscriber-neighbors
 end
 
-to-report get-average-monthly-bill  ; Person method
-  report (sum monthly-bills-list) / (length monthly-bills-list)
+to-report get-avgMonthlyBill  ; Person method
+  report (sum lMonthlyBills) / (length lMonthlyBills)
 end
 
 
@@ -502,16 +500,10 @@ to debug-test
   ;output-print "=========="
 
   ask one-of carriers with [color = green] [
-    set price-in 85
-    set price-out 155
+    set priceIn 85
+    set priceOut 155
   ]
 end
-
-
-
-
-
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -623,18 +615,18 @@ MONITOR
 939
 523
 Carrier customers
-;count people with [count out-subscriber-neighbors > 0]\ntotal-mobile-subscribers
+totalMobileSubscribers
 17
 1
 11
 
 MONITOR
-948
-479
-1076
-524
+949
+478
+1077
+523
 Carrier penetration (%)
-100 * total-mobile-subscribers / nOfPeople
+100 * totalMobileSubscribers / nOfPeople
 1
 1
 11
@@ -672,7 +664,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (100 * subscribers-last / nOfPeople)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (100 * subscribers-count / nOfPeople)\n]"
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (100 * subscribersCount-last / nOfPeople)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (100 * subscribersCount / nOfPeople)\n]"
 
 PLOT
 811
@@ -690,13 +682,13 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (ini-current-discount-last)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (ini-current-discount)\n]"
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (iniCurrentDiscount-last)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (iniCurrentDiscount)\n]"
 
 BUTTON
-12
-758
-191
-791
+21
+757
+200
+790
 Group people by carrier
 display-people-grouped-by-carrier
 T
@@ -710,12 +702,12 @@ NIL
 1
 
 SWITCH
-25
+6
 718
-174
+210
 751
-layout-grouped
-layout-grouped
+naiveSN-layoutGrouped
+naiveSN-layoutGrouped
 1
 1
 -1000
@@ -736,36 +728,36 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot carrier-switches-now-average"
+"default" 1.0 0 -16777216 true "" "plot carrierSwitchesNowAvg"
 
 CHOOSER
 24
 164
 171
 209
-social-network-type
-social-network-type
+socialNetworkType
+socialNetworkType
 "Two-Circles" "Naive"
 0
 
 MONITOR
-200
-695
-304
-740
+222
+699
+326
+744
 avg friends big
-precision average-friends-count-big 3
+precision averageFriendsCount-big 3
 17
 1
 11
 
 MONITOR
-201
-746
-303
-791
+223
+750
+325
+795
 avg friends nbig
-precision average-friends-count-nbig 3
+precision averageFriendsCount-nBig 3
 17
 1
 11
