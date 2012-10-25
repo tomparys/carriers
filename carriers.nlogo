@@ -20,6 +20,19 @@ globals [
   avgFriendsCount-nBig
   avgIncome
   
+  ; Carrier settings for this run
+  CARRIER_BLUE_PRICE_IN
+  CARRIER_BLUE_PRICE_OUT
+  CARRIER_BLUE_MAX_DISCOUNT
+  CARRIER_RED_PRICE_IN
+  CARRIER_RED_PRICE_OUT
+  CARRIER_RED_MAX_DISCOUNT
+  CARRIER_RED_ENTRANCE_TICK
+  CARRIER_GREEN_PRICE_IN
+  CARRIER_GREEN_PRICE_OUT
+  CARRIER_GREEN_MAX_DISCOUNT
+  CARRIER_GREEN_ENTRANCE_TICK
+  
   ; Essential constants
   COST_MIN_IN
   COST_MIN_OUT
@@ -79,11 +92,13 @@ directed-link-breed [subscribers subscriber]
 
 
 
+
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Setup phase ----------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------
 
 
+; ----- Setup --------------------------------------------------------------------------------------
 to setup
   clear-all
   set-constants
@@ -93,8 +108,8 @@ to setup
     [create-social-network-randomized]
   setup-people
   
-  ;; Create first mobile carrier
-  create-mobile-carrier 1
+  ;; Create initial mobile carrier(s)
+  handle-creation-of-mobile-carriers -1
 
   reset-ticks
 end
@@ -102,6 +117,21 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
+  ; Carrier settings for this run
+  set CARRIER_BLUE_PRICE_IN   131
+  set CARRIER_BLUE_PRICE_OUT  131
+  set CARRIER_BLUE_MAX_DISCOUNT  0
+
+  set CARRIER_RED_PRICE_IN   109
+  set CARRIER_RED_PRICE_OUT  159
+  set CARRIER_RED_MAX_DISCOUNT  15
+  set CARRIER_RED_ENTRANCE_TICK  30
+
+  set CARRIER_GREEN_PRICE_IN   80
+  set CARRIER_GREEN_PRICE_OUT  180
+  set CARRIER_GREEN_MAX_DISCOUNT  30
+  set CARRIER_GREEN_ENTRANCE_TICK  80
+  
   ; Essential constants
   set COST_MIN_IN   100        ; cost of 1 minute of calling inside one network
   set COST_MIN_OUT  150        ; cost paid to other carrier for connecting a call to his network
@@ -167,7 +197,7 @@ to create-social-network-randomized
   
   ; Create each person
   create-people nOfPeople [
-    set color grey
+    set color white
     set big false
   ]
   
@@ -199,8 +229,9 @@ to setup-people
   set avgFriendsCount  sum [friendsCount] of people / count people
   
   set avgFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
-  ifelse socialNetworkType = "Randomized" [set avgFriendsCount-big 0]
+  ifelse socialNetworkType = "Two-Circles"
     [set avgFriendsCount-big  sum [friendsCount] of people with [big] / count people with [big]]
+    [set avgFriendsCount-big  0]
 
   ask people [
     ;; Values set in czech cents and minutes. Data are roughly aligned with what statistics say about czech mobile phone users.
@@ -215,61 +246,55 @@ to setup-people
 end
 
 
-; ----- Create next mobile carrier (they are created one by one at any wanted moment) ---------------------------------------------------
-to create-mobile-carrier [id]
-  ;;  Create the carriers themselves and set their variables
-  let tCarrier 0
-  if id = 1 [
-    create-carriers 1 [
-      set color blue
-      set priceIn 131
-      set priceOut 131
-      set iniMaxDiscount 0
-      set tCarrier self
-    ]
+; ----- Handle creation of mobile carriers at preset times and with preset constants ---------------------------------------------------
+to handle-creation-of-mobile-carriers [nTicks]
+  ifelse nTicks = -1 [
+    create-mobile-carrier blue CARRIER_BLUE_PRICE_IN CARRIER_BLUE_PRICE_OUT CARRIER_BLUE_MAX_DISCOUNT
   ]
-  if id = 2 [
-    create-carriers 1 [
-      set color red
-      set priceIn 109
-      set priceOut 159
-      set iniMaxDiscount 15
-      set tCarrier self
-    ]
+  if nTicks = CARRIER_RED_ENTRANCE_TICK [
+    create-mobile-carrier red CARRIER_RED_PRICE_IN CARRIER_RED_PRICE_OUT CARRIER_RED_MAX_DISCOUNT
+    ; TODO - already existing carrier(s) price reaction
   ]
-  if id = 3 [
-    create-carriers 1 [
-      set color green
-      set priceIn 80
-      set priceOut 180
-      set iniMaxDiscount 30
-      set tCarrier self
-    ]
+  if nTicks = CARRIER_GREEN_ENTRANCE_TICK [
+    create-mobile-carrier green CARRIER_GREEN_PRICE_IN CARRIER_GREEN_PRICE_OUT CARRIER_GREEN_MAX_DISCOUNT
+    ; TODO - already existing carrier(s) price reaction
   ]
-  
-  ; Set common variables
-  ask tCarrier [
+end
+
+; ----- Helper method that initiates a mobile phone carrier ---------------------------------------------------
+to create-mobile-carrier [tColor tPriceIn tPriceOut tIniMaxDiscount]
+  create-carriers 1 [
+    ; Set basic constants
+    set color tColor
+    set priceIn tPriceIn
+    set priceOut tPriceOut
+    set iniMaxDiscount tIniMaxDiscount
+    
+    ; Income variables
+    set curRevenue  0
+    set accIncome  0
+    set minsSuppliedIn  0
+    set minsSuppliedOut  0 
+
+    ; Helper variables
     set iniDiscountGivingRemaining  DISCOUNT_GIVING_DURATION
     set iniCurrentDiscount  iniMaxDiscount
-  ]
-  
-  ;;  Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
-  ask tCarrier [
+    
+    ; Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
+    let carrierSelf self
     ask one-of people [
-      join-carrier tCarrier
-      ask friend-neighbors [join-carrier tCarrier]
+      join-carrier carrierSelf
+      ask friend-neighbors [join-carrier carrierSelf]
     ]
-  ]
-  
-  ; Counters and graphical representation
-  ask tCarrier [
+
+    ; Counters and graphical representation
     hide-turtle
     set subscribersCount count in-subscriber-neighbors
     set subscribersCount-last subscribersCount
     set iniCurrentDiscount-last iniCurrentDiscount
   ]
-  color-friend-links-based-on-common-carrier
 end
+
 
 
 
@@ -280,20 +305,9 @@ end
 
 ; ----- Go --------------------------------------------------------------------------------------
 to go
-  ;output-print "\n------------------\n"
-  
-  ;;  Stopping is currently disabled
-  ;if not any? people with [not any? out-subscriber-neighbors] [
-  ;  if layout-grouped [repeat 200 [display-people-grouped-by-carrier]] ;; To sort into layout order the last connected subscribers
-  ;  stop
-  ;]
-  
   customers-make-choices
   
-
-  if ticks = 30 [create-mobile-carrier 2]
-  if ticks = 80 [create-mobile-carrier 3]
-  
+  handle-creation-of-mobile-carriers ticks
   carriers-make-choices
   
   ; Counters and graphical representation
@@ -307,7 +321,6 @@ to go
   if totalMobileSubscribers < nOfPeople [
     set totalMobileSubscribers  count people with [count out-subscriber-neighbors > 0]
   ]
-    
   
   tick
 end
