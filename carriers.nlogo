@@ -69,6 +69,7 @@ people-own [
 breed [carriers carrier]
 carriers-own [
   curRevenue           ; current monthly revenue (money paid by customers, costs are not yet deducted)
+  curIncome            ; current monthly income
   accIncome            ; accumulated income - sum of past earnings
   minsSuppliedIn       ; how many minutes of calling the carrier supplied to its customers, within its own network
   minsSuppliedOut      ;                                                                  , to the other networks
@@ -249,7 +250,7 @@ end
 
 ; ----- Handle creation of mobile carriers at preset times and with preset constants ---------------------------------------------------
 to handle-creation-of-mobile-carriers [nTicks]
-  ifelse nTicks = -1 [
+  if nTicks = -1 [
     create-mobile-carrier blue CARRIER_BLUE_PRICE_IN CARRIER_BLUE_PRICE_OUT CARRIER_BLUE_MAX_DISCOUNT
   ]
   if nTicks = CARRIER_RED_ENTRANCE_TICK [
@@ -273,6 +274,7 @@ to create-mobile-carrier [tColor tPriceIn tPriceOut tIniMaxDiscount]
     
     ; Income variables
     set curRevenue  0
+    set curIncome  0
     set accIncome  0
     set minsSuppliedIn  0
     set minsSuppliedOut  0 
@@ -329,7 +331,7 @@ end
 
 ; ----- Carriers make choices ---------------------------------------------------------------------------
 to carriers-make-choices
-  ; Count subscribers
+  ;; Count subscribers
   ask carriers [
     set subscribersCount-last subscribersCount
     set subscribersCount count in-subscriber-neighbors
@@ -337,16 +339,26 @@ to carriers-make-choices
     if subscribersCount = 0 [die]
   ]
   
-  ;;  Set discount levels for each carrier in the initial stage
+  ;;  Set discount levels for each carrier in the initial stage of their entrance to the market
   ask carriers [set iniCurrentDiscount-last iniCurrentDiscount]
-    ; Compute global variables
-    ask carriers with [iniDiscountGivingRemaining >= 0] [
-      let needOfDiscount  (iniDiscountGivingRemaining / DISCOUNT_GIVING_DURATION) ; * ((smallest-carrier-subscribers / subscribersCount))
-
-      set iniCurrentDiscount  min (list iniMaxDiscount (iniMaxDiscount * needOfDiscount * 2))
+  ask carriers with [iniDiscountGivingRemaining >= 0] [
+    let needOfDiscount  (iniDiscountGivingRemaining / DISCOUNT_GIVING_DURATION)
+    set iniCurrentDiscount  min (list iniMaxDiscount (iniMaxDiscount * needOfDiscount * 2))
       
-      set iniDiscountGivingRemaining  iniDiscountGivingRemaining - 1
-    ]
+    set iniDiscountGivingRemaining  iniDiscountGivingRemaining - 1
+  ]
+  
+  ;; Accounting of revenue, costs and income
+  ask carriers [
+    let curCosts  minsSuppliedIn * COST_MIN_IN + minsSuppliedOut * (COST_MIN_IN + COST_MIN_OUT)
+    set curIncome  curRevenue - curCosts
+    set accIncome  accIncome + curIncome
+
+    ; Reset variables that are filled in customers-make-choices between runs of this function carriers-make-choices
+    set curRevenue  0
+    set minsSuppliedIn   0
+    set minsSuppliedOut  0
+  ]
 end
 
 
