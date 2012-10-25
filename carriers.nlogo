@@ -43,7 +43,6 @@ globals [
   MONTHLY_BILLS_COUNT-FOR_AVG
   PROB_CHECKING_BETTER_CARRIERS
   PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS
-  PROB_CARRIER_SIGNUP_ALONE
   
   CARRIER_SWITCH_COST_COEF
   
@@ -129,12 +128,12 @@ to set-constants
   set CARRIER_RED_PRICE_IN   218
   set CARRIER_RED_PRICE_OUT  318
   set CARRIER_RED_MAX_DISCOUNT  15
-  set CARRIER_RED_ENTRANCE_TICK  30
+  set CARRIER_RED_ENTRANCE_TICK  50
 
   set CARRIER_GREEN_PRICE_IN   160
   set CARRIER_GREEN_PRICE_OUT  360
   set CARRIER_GREEN_MAX_DISCOUNT  30
-  set CARRIER_GREEN_ENTRANCE_TICK  80
+  set CARRIER_GREEN_ENTRANCE_TICK  100
   
   ; Essential constants
   set COST_1MIN      100        ; cost of 1 minute of calling for the operator
@@ -145,8 +144,7 @@ to set-constants
   set DISCOUNT_DURATION  30                                                 ; How many ticks does received discount last.
   set MONTHLY_BILLS_COUNT-FOR_AVG  10                                       ; How many of recent bills are used for averaging.
   set PROB_CHECKING_BETTER_CARRIERS  25                                     ; per mille (All probability values are per mille.)
-  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  100                            ; per mille
-  set PROB_CARRIER_SIGNUP_ALONE  3                                          ; per mille
+  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  180                            ; per mille
 
   set CARRIER_SWITCH_COST_COEF  5000                                        ; roughly a price (i.e. in czech cents)
   
@@ -291,11 +289,11 @@ to create-mobile-carrier [tColor tPriceIn tPriceOut tIniMaxDiscount]
     set iniDiscountGivingRemaining  DISCOUNT_GIVING_DURATION
     set iniCurrentDiscount  iniMaxDiscount
     
-    ; Give each carrier one person and its friends as starting subscribers. (Owner and his friends.)
+    ; Give each carrier 3 people and 1/2 of their friends as starting subscribers. (Owner and his friends.)
     let carrierSelf self
-    ask one-of people [
+    ask n-of 3 people [
       join-carrier carrierSelf
-      ask friend-neighbors [join-carrier carrierSelf]
+      ask n-of  precision (friendsCount / 2) 0  friend-neighbors  [join-carrier carrierSelf]
     ]
 
     ; Counters and graphical representation
@@ -488,16 +486,11 @@ to customers-make-choices
     [ ; Does not have a carrier
       
       ;;  Subscribe to a carrier, if he wants to.
-      ifelse mobileFriends > 0 [ ; If he has friends using mobile phones
+      if mobileFriends > 0 [ ; If he has friends using mobile phones
         ; Weigh his options to join or not to join this month
         if random 1000 < (PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS * mobileFriends / friendsCount)  [
           ; Join the most sensible carrier
           join-carrier lowestPotentialCarrier
-        ]
-      ]
-      [ ; If he does not have friends using mobile phones
-        if random 1000 < PROB_CARRIER_SIGNUP_ALONE [
-          join-carrier one-of carriers  ; TODO he should join the carrier with the lowest price
         ]
       ]
     ]
