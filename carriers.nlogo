@@ -20,6 +20,10 @@ globals [
   avgFriendsCount-nBig
   avgIncome
   
+  ; Essential constants
+  COST_MIN_IN
+  COST_MIN_OUT
+  
   ; Constants
   DISCOUNT_GIVING_DURATION
   DISCOUNT_DURATION
@@ -51,8 +55,10 @@ people-own [
 
 breed [carriers carrier]
 carriers-own [
-  revenue        ; current monthly revenue
-  totalRevenue   ; sum/total revenue ever gotten
+  curRevenue           ; current monthly revenue (money paid by customers, costs are not yet deducted)
+  accIncome            ; accumulated income - sum of past earnings
+  minsSuppliedIn       ; how many minutes of calling the carrier supplied to its customers, within its own network
+  minsSuppliedOut      ;                                                                  , to the other networks
   
   priceIn
   priceOut
@@ -84,7 +90,7 @@ to setup
   
   ;; Create social network
   ifelse socialNetworkType = "Two-Circles" [create-social-network-two-circles]
-    [create-social-network-naive]
+    [create-social-network-randomized]
   setup-people
   
   ;; Create first mobile carrier
@@ -96,6 +102,11 @@ end
 
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
+  ; Essential constants
+  set COST_MIN_IN   100        ; cost of 1 minute of calling inside one network
+  set COST_MIN_OUT  150        ; cost paid to other carrier for connecting a call to his network
+  
+  ; Other
   set DISCOUNT_GIVING_DURATION  150                                         ; For how many ticks does Operator give out discounts
   set DISCOUNT_DURATION  30                                                 ; How many ticks does received discount last.
   set MONTHLY_BILLS_COUNT-FOR_AVG  10                                       ; How many of recent bills are used for averaging.
@@ -147,8 +158,8 @@ to create-social-network-two-circles
 end
 
 
-; ----- Create social network - Naive ---------------------------------------------------------------------------
-to create-social-network-naive
+; ----- Create social network - Randomized ---------------------------------------------------------------------------
+to create-social-network-randomized
   ;; Constants for creation of the network
   let nFriendships nOfPeople * 2
   
@@ -173,7 +184,7 @@ to create-social-network-naive
   
   ;;  Graphics and displays
   ask people [set size 5]
-  ifelse naiveSN-layoutGrouped [
+  ifelse randSN-layoutGrouped [
     display-people-grouped-by-carrier
   ] [
     layout-radial people friends (person 0)
@@ -188,7 +199,7 @@ to setup-people
   set avgFriendsCount  sum [friendsCount] of people / count people
   
   set avgFriendsCount-nBig  sum [friendsCount] of people with [not big] / count people with [not big]
-  ifelse socialNetworkType = "Naive" [set avgFriendsCount-big 0]
+  ifelse socialNetworkType = "Randomized" [set avgFriendsCount-big 0]
     [set avgFriendsCount-big  sum [friendsCount] of people with [big] / count people with [big]]
 
   ask people [
@@ -287,7 +298,7 @@ to go
   
   ; Counters and graphical representation
   color-friend-links-based-on-common-carrier
-  if socialNetworkType = "Naive" and naiveSN-layoutGrouped [display-people-grouped-by-carrier]
+  if socialNetworkType = "Randomized" and randSN-layoutGrouped [display-people-grouped-by-carrier]
   
   if ticks mod STATS_SAMPLING_INTERVAL = 0 [
     set carrierSwitchesNowAvg carrierSwitchesNow
@@ -720,8 +731,8 @@ SWITCH
 718
 210
 751
-naiveSN-layoutGrouped
-naiveSN-layoutGrouped
+randSN-layoutGrouped
+randSN-layoutGrouped
 1
 1
 -1000
@@ -751,7 +762,7 @@ CHOOSER
 209
 socialNetworkType
 socialNetworkType
-"Two-Circles" "Naive"
+"Two-Circles" "Randomized"
 0
 
 MONITOR
