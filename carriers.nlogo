@@ -104,7 +104,8 @@ to setup
   set-constants
   
   ;; Create social network
-  ifelse socialNetworkType = "Two-Circles" [create-social-network-two-circles]
+  ifelse socialNetworkType = "Two-Circles"
+    [create-social-network-two-circles]
     [create-social-network-randomized]
   setup-people
   
@@ -310,7 +311,7 @@ to go
   handle-creation-of-mobile-carriers ticks
   carriers-make-choices
   
-  ; Counters and graphical representation
+  ;;  Counters and graphical representation
   color-friend-links-based-on-common-carrier
   if socialNetworkType = "Randomized" and randSN-layoutGrouped [display-people-grouped-by-carrier]
   
@@ -455,9 +456,11 @@ end
 
 
 
+
 ; ----------------------------------------------------------------------------------------------------
 ; ----- Helper methods -------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------
+
 
 to-report random-normal-min [meanValue standardDeviation minimum]
   let r  random-normal meanValue standardDeviation
