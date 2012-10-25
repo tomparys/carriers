@@ -34,8 +34,8 @@ globals [
   CARRIER_GREEN_ENTRANCE_TICK
   
   ; Essential constants
-  COST_MIN_IN
-  COST_MIN_OUT
+  COST_1MIN
+  ACCESS_CHARGE
   
   ; Constants
   DISCOUNT_GIVING_DURATION
@@ -68,11 +68,11 @@ people-own [
 
 breed [carriers carrier]
 carriers-own [
-  curRevenue           ; current monthly revenue (money paid by customers, costs are not yet deducted)
-  curIncome            ; current monthly income
-  accIncome            ; accumulated income - sum of past earnings
-  minsSuppliedIn       ; how many minutes of calling the carrier supplied to its customers, within its own network
-  minsSuppliedOut      ;                                                                  , to the other networks
+  curRevenue              ; current monthly revenue (money paid by customers, costs are not yet deducted)
+  curIncome               ; current monthly income
+  accIncome               ; accumulated income - sum of past earnings
+  minsSupplied            ; how many minutes of calling the carrier supplied to its customers
+  accessChargeBalance     ; how many minutes of access charge will carrier pay (or will be payed if < 0) at the end of the month
   
   priceIn
   priceOut
@@ -81,6 +81,8 @@ carriers-own [
   iniDiscountGivingRemaining
   
   ; Temp, counters and graphical representation
+  curIncome-last
+  accIncome-last
   subscribersCount
   subscribersCount-last
   iniCurrentDiscount-last
@@ -120,23 +122,23 @@ end
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
   ; Carrier settings for this run
-  set CARRIER_BLUE_PRICE_IN   131
-  set CARRIER_BLUE_PRICE_OUT  131
+  set CARRIER_BLUE_PRICE_IN   262
+  set CARRIER_BLUE_PRICE_OUT  262
   set CARRIER_BLUE_MAX_DISCOUNT  0
 
-  set CARRIER_RED_PRICE_IN   109
-  set CARRIER_RED_PRICE_OUT  159
+  set CARRIER_RED_PRICE_IN   218
+  set CARRIER_RED_PRICE_OUT  318
   set CARRIER_RED_MAX_DISCOUNT  15
   set CARRIER_RED_ENTRANCE_TICK  30
 
-  set CARRIER_GREEN_PRICE_IN   80
-  set CARRIER_GREEN_PRICE_OUT  180
+  set CARRIER_GREEN_PRICE_IN   160
+  set CARRIER_GREEN_PRICE_OUT  360
   set CARRIER_GREEN_MAX_DISCOUNT  30
   set CARRIER_GREEN_ENTRANCE_TICK  80
   
   ; Essential constants
-  set COST_MIN_IN   100        ; cost of 1 minute of calling inside one network
-  set COST_MIN_OUT  150        ; cost paid to other carrier for connecting a call to his network
+  set COST_1MIN      100        ; cost of 1 minute of calling for the operator
+  set ACCESS_CHARGE  150        ; price paid to other carrier for connecting a call to his network per minute
   
   ; Other
   set DISCOUNT_GIVING_DURATION  150                                         ; For how many ticks does Operator give out discounts
@@ -275,9 +277,11 @@ to create-mobile-carrier [tColor tPriceIn tPriceOut tIniMaxDiscount]
     ; Income variables
     set curRevenue  0
     set curIncome  0
+    set curIncome-last  0
     set accIncome  0
-    set minsSuppliedIn  0
-    set minsSuppliedOut  0 
+    set accIncome-last  0
+    set minsSupplied  0
+    set accessChargeBalance  0 
 
     ; Helper variables
     set iniDiscountGivingRemaining  DISCOUNT_GIVING_DURATION
@@ -350,14 +354,17 @@ to carriers-make-choices
   
   ;; Accounting of revenue, costs and income
   ask carriers [
-    let curCosts  minsSuppliedIn * COST_MIN_IN + minsSuppliedOut * (COST_MIN_IN + COST_MIN_OUT)
+    set curIncome-last  curIncome
+    set accIncome-last  accIncome
+    
+    let curCosts  minsSupplied * COST_1MIN + accessChargeBalance * ACCESS_CHARGE   ; costs can be negative, if he has negative accessChargeBalance!
     set curIncome  curRevenue - curCosts
     set accIncome  accIncome + curIncome
 
     ; Reset variables that are filled in customers-make-choices between runs of this function carriers-make-choices
     set curRevenue  0
-    set minsSuppliedIn   0
-    set minsSuppliedOut  0
+    set minsSupplied  0
+    set accessChargeBalance  0
   ]
 end
 
@@ -382,21 +389,50 @@ to customers-make-choices
     ; Compute monthly bill, if he is subscribed
     if has-carrier [
       let latestBill 0
+      let wantsTalkMins  talkativeness * (mobileFriends / friendsCount)
+
       ask get-carrier [
         ifelse mobileFriends > 0 [
-          set latestBill (tFriends * priceIn + (mobileFriends - tFriends) * priceOut) / mobileFriends
-                             * [talkativeness] of pSelf * (mobileFriends / [friendsCount] of pSelf)
-                             * (get-discount-multiplier [iniDiscount] of pSelf)                              ; similar equation is a few rows below
+          let avgPriceOf1Minute  (tFriends * priceIn + (mobileFriends - tFriends) * priceOut) / mobileFriends
+                                        * (get-discount-multiplier [iniDiscount] of pSelf)                  ; similar equation is a few rows below
+          set latestBill  avgPriceOf1Minute * wantsTalkMins
         ] [
           ;; TODO - monthly bill if he has no friends              -- TODO
           set latestBill 0
         ]
-      ]  
+      ]
+      
+      ; Save (potential) monthly bill into list
       set lMonthlyBills lput latestBill lMonthlyBills
       if length lMonthlyBills > MONTHLY_BILLS_COUNT-FOR_AVG [
         set lMonthlyBills remove-item 0 lMonthlyBills
       ]
+      
+      ;;  Pay money for the services to the operator
+      ;;    (BUT! not full bill, but only how much he can afford - he won't talk as long if he can't afford it)
+      if latestBill > 0 [
+        let actuallyTalkedMins wantsTalkMins
+        let actuallyPaidBill latestBill
+        
+        if actuallyPaidBill > income [
+          set actuallyPaidBill  income
+          set actuallyTalkedMins  actuallyTalkedMins * actuallyPaidBill / latestBill  ; he talked only a portion of the time he wanted
+        ]
+        
+        ask get-carrier [
+          ; Carrier gets paid, and marks down how many minutes he supplied, and how many access charges he will have to pay
+          set curRevenue  curRevenue + actuallyPaidBill
+          set minsSupplied  minsSupplied + actuallyTalkedMins
+          set accessChargeBalance  accessChargeBalance + actuallyTalkedMins * (mobileFriends - tFriends) / mobileFriends
+          
+          ask other carriers [
+            ;; Access charges are deducted from AC balance of other carriers
+            set accessChargeBalance  accessChargeBalance - actuallyTalkedMins * tFriends / mobileFriends
+          ]
+        ]
+      ]
     ]
+    
     
     ;;  Check to change or subscribe to a new carrier only sometimes
     
@@ -685,10 +721,10 @@ Carrier penetration (%)
 11
 
 BUTTON
-931
-761
-1074
-794
+35
+680
+178
+713
 Debug test button
 debug-test
 NIL
@@ -814,6 +850,42 @@ precision avgFriendsCount-nBig 3
 17
 1
 11
+
+PLOT
+811
+452
+1077
+625
+Current Income / 100
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (curIncome-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (curIncome / 100)\n]"
+
+PLOT
+811
+632
+1077
+799
+Accumulated Income / 100
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (accIncome-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (accIncome / 100)\n]"
 
 @#$#@#$#@
 ## WHAT IS IT?
