@@ -530,6 +530,7 @@ end
 
 
 to join-carrier [t-carrier]  ; person-turtle method
+  ask my-out-subscribers [die] ; Unsubscribe from the old carrier if by chance he has one
   create-subscriber-to t-carrier [hide-link]
 
   set lMonthlyBills []
@@ -540,9 +541,7 @@ to join-carrier [t-carrier]  ; person-turtle method
 end
 
 to change-carrier [t-carrier]  ; Person method
-  ask my-out-subscribers [die] ; Unsubscribe from the old carrier
   join-carrier t-carrier
-
   set carrierSwitchesNow carrierSwitchesNow + 1
 end
   
