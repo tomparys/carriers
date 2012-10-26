@@ -225,7 +225,7 @@ to create-social-network-randomized
   ;;  Graphics and displays
   ask people [set size 5]
   ifelse randSN-layoutGrouped [
-    display-people-grouped-by-carrier
+    display-layout-people-grouped-by-carrier
   ] [
     layout-radial people friends (person 0)
     display
@@ -325,7 +325,7 @@ to go
   
   ;;  Counters and graphical representation
   color-friend-links-based-on-common-carrier
-  if socialNetworkType = "Randomized" and randSN-layoutGrouped [display-people-grouped-by-carrier]
+  if socialNetworkType = "Randomized" and randSN-layoutGrouped [display-layout-people-grouped-by-carrier]
   
   if ticks mod STATS_SAMPLING_INTERVAL = 0 [
     set carrierSwitchesNowAvg carrierSwitchesNow
@@ -547,21 +547,12 @@ to change-carrier [t-carrier]  ; Person method
 end
   
 
-to-report get-avg-friend-count
-  let s 0
-  ask people [
-    set s s + count friend-neighbors
-  ]
-  report s / count people
-end
-
-
 to-report get-discount-multiplier [discount]
   report (100 - discount) / 100
 end
 
 
-to display-people-grouped-by-carrier
+to display-layout-people-grouped-by-carrier
     layout-spring people (friends with [color != grey]) 1 1 1
     display
 end
@@ -588,12 +579,7 @@ end
 
 
 to debug-test
-  ;output-print "=========="
-
-  ask one-of carriers with [color = green] [
-    set priceIn 85
-    set priceOut 155
-  ]
+  ; output-print "=========="
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
