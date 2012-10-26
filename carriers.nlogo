@@ -140,16 +140,16 @@ to set-constants
   set ACCESS_CHARGE  150        ; price paid to other carrier for connecting a call to his network per minute
   
   ; Other
-  set DISCOUNT_GIVING_DURATION  150                                         ; For how many ticks does Operator give out discounts
-  set DISCOUNT_DURATION  30                                                 ; How many ticks does received discount last.
-  set MONTHLY_BILLS_COUNT-FOR_AVG  10                                       ; How many of recent bills are used for averaging.
-  set PROB_CHECKING_BETTER_CARRIERS  25                                     ; per mille (All probability values are per mille.)
-  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  180                            ; per mille
+  set DISCOUNT_GIVING_DURATION  150                         ; For how many ticks does Operator give out discounts
+  set DISCOUNT_DURATION  30                                 ; How many ticks does received discount last.
+  set MONTHLY_BILLS_COUNT-FOR_AVG  10                       ; How many of recent bills are used for averaging.
+  set PROB_CHECKING_BETTER_CARRIERS  25                     ; per mille (All probability values are per mille.)
+  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  180            ; per mille
 
-  set CARRIER_SWITCH_COST_COEF  5000                                        ; roughly a price (i.e. in czech cents)
+  set CARRIER_SWITCH_COST_COEF  5000                        ; roughly a price (i.e. in czech cents)
   
   ; Counters and graphical representation
-  set STATS_SAMPLING_INTERVAL  4                                            ; Used for displaying Carrier switches plot
+  set STATS_SAMPLING_INTERVAL  4                            ; Used for displaying Carrier switches plot
 end
 
 
@@ -436,64 +436,64 @@ to customers-make-choices
     
     ;;  Check if it is worth it to subscribe to a new carrier
     
-    ; Find out which carrier will give him the lowest monthly bill
-    let lowestPotentialBill 999999999
-    let lowestPotentialCarrier 0
-    
-    if mobileFriends > 0 [
-      ask carriers [
-        ; Count potential bill
-        let avgPriceOf1Minute  (tFriends * priceIn + (mobileFriends - tFriends) * priceOut) / mobileFriends
-                                        * (get-discount-multiplier iniCurrentDiscount)                  ; similar equation is a few rows above
-        let potentialBill  avgPriceOf1Minute * wantsTalkMins
-        
-        if lowestPotentialBill > potentialBill [
-          set lowestPotentialBill  potentialBill
-          set lowestPotentialCarrier  self
+      ; Find out which carrier will give him the lowest monthly bill
+      let lowestPotentialBill 999999999
+      let lowestPotentialCarrier 0
+      
+      if mobileFriends > 0 [
+        ask carriers [
+          ; Count potential bill
+          let avgPriceOf1Minute  (tFriends * priceIn + (mobileFriends - tFriends) * priceOut) / mobileFriends
+                                          * (get-discount-multiplier iniCurrentDiscount)                  ; similar equation is a few rows above
+          let potentialBill  avgPriceOf1Minute * wantsTalkMins
+          
+          if lowestPotentialBill > potentialBill [
+            set lowestPotentialBill  potentialBill
+            set lowestPotentialCarrier  self
+          ]
         ]
       ]
-    ]
-      
-    ifelse has-carrier [ ; Has a carrier already
-      ifelse iniDiscountMonths > 0 [
-        ;; If he has a discount, he can't leave the carrier, shorten the discount by a month
-        set iniDiscountMonths  iniDiscountMonths - 1
-        if iniDiscountMonths = 0 [
-          set iniDiscount 0
-        ]
-      ] [ ;; He has no discount currently
-        ; Check to change or subscribe to a new carrier only sometimes
-        if random 1000 < PROB_CHECKING_BETTER_CARRIERS [
-          let avgMonthlyBill  get-avgMonthlyBill
-          
-          if lowestPotentialBill < avgMonthlyBill [  ; There is cheaper carrier for him
-            ifelse get-carrier = lowestPotentialCarrier [
-              ; Resubscribe to his current carrier to receive a new discount
-              set iniDiscount [iniCurrentDiscount] of lowestPotentialCarrier
-            ] [
-              ; Weigh the decision to change carrier
-              let monthlySavings  avgMonthlyBill - lowestPotentialBill
-              let carrierSwitchCost  (friendsCount / avgFriendsCount) * (income / avgIncome) * CARRIER_SWITCH_COST_COEF
-              
-              if monthlySavings > carrierSwitchCost [
-                change-carrier lowestPotentialCarrier
+        
+      ifelse has-carrier [ ; Has a carrier already
+        ifelse iniDiscountMonths > 0 [
+          ;; If he has a discount, he can't leave the carrier, shorten the discount by a month
+          set iniDiscountMonths  iniDiscountMonths - 1
+          if iniDiscountMonths = 0 [
+            set iniDiscount 0
+          ]
+        ] [ ;; He has no discount currently
+          ; Check to change or subscribe to a new carrier only sometimes
+          if random 1000 < PROB_CHECKING_BETTER_CARRIERS [
+            let avgMonthlyBill  get-avgMonthlyBill
+            
+            if lowestPotentialBill < avgMonthlyBill [  ; There is cheaper carrier for him
+              ifelse get-carrier = lowestPotentialCarrier [
+                ; Resubscribe to his current carrier to receive a new discount
+                set iniDiscount [iniCurrentDiscount] of lowestPotentialCarrier
+              ] [
+                ; Weigh the decision to change carrier
+                let monthlySavings  avgMonthlyBill - lowestPotentialBill
+                let carrierSwitchCost  (friendsCount / avgFriendsCount) * (income / avgIncome) * CARRIER_SWITCH_COST_COEF
+                
+                if monthlySavings > carrierSwitchCost [
+                  change-carrier lowestPotentialCarrier
+                ]
               ]
             ]
           ]
         ]
       ]
-    ]
-    [ ; Does not have a carrier
-      
-      ;;  Subscribe to a carrier, if he wants to.
-      if mobileFriends > 0 [ ; If he has friends using mobile phones
-        ; Weigh his options to join or not to join this month
-        if random 1000 < (PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS * mobileFriends / friendsCount)  [
-          ; Join the most sensible carrier
-          join-carrier lowestPotentialCarrier
+      [ ; Does not have a carrier
+        
+        ;;  Subscribe to a carrier, if he wants to.
+        if mobileFriends > 0 [ ; If he has friends using mobile phones
+          ; Weigh his options to join or not to join this month
+          if random 1000 < (PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS * mobileFriends / friendsCount)  [
+            ; Join the most sensible carrier
+            join-carrier lowestPotentialCarrier
+          ]
         ]
       ]
-    ]
   ]
 end
 
