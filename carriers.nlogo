@@ -143,7 +143,7 @@ to set-constants
   
   ; Other
   set DISCOUNT_GIVING_DURATION  150                         ; For how many ticks does Operator give out discounts
-  set DISCOUNT_DURATION  30                                 ; How many ticks does received discount last.
+  set DISCOUNT_DURATION  60                                 ; How many ticks does received discount last.
   set MONTHLY_BILLS_COUNT-FOR_AVG  10                       ; How many of recent bills are used for averaging.
 
   ; Carrier spreading and switching
@@ -477,6 +477,7 @@ to customers-make-choices
               ifelse get-carrier = lowestPotentialCarrier [
                 ; Resubscribe to his current carrier to receive a new discount
                 set iniDiscount [iniCurrentDiscount] of lowestPotentialCarrier
+                if iniDiscount > 0 [set iniDiscountMonths DISCOUNT_DURATION]
               ] [
                 ; Weigh the decision to change carrier
                 let monthlySavings  avgMonthlyBill - lowestPotentialBill
@@ -535,7 +536,7 @@ to join-carrier [t-carrier]  ; person-turtle method
 
   set lMonthlyBills []
   set iniDiscount [iniCurrentDiscount] of t-carrier
-  set iniDiscountMonths DISCOUNT_DURATION
+  if iniDiscount > 0 [set iniDiscountMonths DISCOUNT_DURATION]
   
   set color [color] of one-of out-subscriber-neighbors
 end
@@ -771,6 +772,8 @@ true
 false
 "" ""
 PENS
+"greens currently with discount" 1.0 0 -5509967 true "" "ifelse any? carriers with [color = green] [\n  plot count (([in-subscriber-neighbors] of (one-of carriers with [color = green]))\n                           with [iniDiscount > 0])\n                  * 100 / nOfPeople\n] [\n  plot 0\n]"
+"reds currently with discount" 1.0 0 -1069655 true "" "ifelse any? carriers with [color = red] [\n  plot count (([in-subscriber-neighbors] of (one-of carriers with [color = red]))\n                           with [iniDiscount > 0])\n                  * 100 / nOfPeople\n] [\n  plot 0\n]"
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (iniCurrentDiscount-last)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (iniCurrentDiscount)\n]"
 
 BUTTON
