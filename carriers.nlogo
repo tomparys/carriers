@@ -512,6 +512,39 @@ end
 ; ----------------------------------------------------------------------------------------------------
 
 
+to join-carrier [t-carrier]  ; person-turtle method
+  ask my-out-subscribers [die] ; Unsubscribe from the old carrier if by chance he has one
+  create-subscriber-to t-carrier [hide-link]
+
+  set lMonthlyBills []
+  set iniDiscount [iniCurrentDiscount] of t-carrier
+  if iniDiscount > 0 [set iniDiscountMonths DISCOUNT_DURATION]
+  
+  set color [color] of one-of out-subscriber-neighbors
+end
+
+to change-carrier [t-carrier]  ; Person method
+  join-carrier t-carrier
+  set carrierSwitchesNow carrierSwitchesNow + 1
+end
+
+to-report has-carrier  ; Person method
+  report count out-subscriber-neighbors > 0
+end
+
+to-report get-carrier  ; Person method
+  report one-of out-subscriber-neighbors
+end
+
+
+to-report get-discount-multiplier [discount]
+  report (100 - discount) / 100
+end
+
+to-report get-avgMonthlyBill  ; Person method
+  report (sum lMonthlyBills) / (length lMonthlyBills)
+end
+
 to-report random-normal-min [meanValue standardDeviation minimum]
   let r  random-normal meanValue standardDeviation
   ifelse r > minimum [report r]
@@ -529,46 +562,9 @@ to color-friend-links-based-on-common-carrier
   ]
 end
 
-
-to join-carrier [t-carrier]  ; person-turtle method
-  ask my-out-subscribers [die] ; Unsubscribe from the old carrier if by chance he has one
-  create-subscriber-to t-carrier [hide-link]
-
-  set lMonthlyBills []
-  set iniDiscount [iniCurrentDiscount] of t-carrier
-  if iniDiscount > 0 [set iniDiscountMonths DISCOUNT_DURATION]
-  
-  set color [color] of one-of out-subscriber-neighbors
-end
-
-to change-carrier [t-carrier]  ; Person method
-  join-carrier t-carrier
-  set carrierSwitchesNow carrierSwitchesNow + 1
-end
-  
-
-to-report get-discount-multiplier [discount]
-  report (100 - discount) / 100
-end
-
-
 to display-layout-people-grouped-by-carrier
     layout-spring people (friends with [color != grey]) 1 1 1
     display
-end
-
-
-to-report has-carrier  ; Person method
-  report count out-subscriber-neighbors > 0
-end
-
-
-to-report get-carrier  ; Person method
-  report one-of out-subscriber-neighbors
-end
-
-to-report get-avgMonthlyBill  ; Person method
-  report (sum lMonthlyBills) / (length lMonthlyBills)
 end
 
 
