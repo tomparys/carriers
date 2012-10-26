@@ -41,9 +41,11 @@ globals [
   DISCOUNT_GIVING_DURATION
   DISCOUNT_DURATION
   MONTHLY_BILLS_COUNT-FOR_AVG
-  PROB_CHECKING_BETTER_CARRIERS
-  PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS
-  
+
+  ; Carrier signup and switching
+  PROB_CUSTOMERS_CHECK_POSSIBILITIES
+  COMP_PROB_CARRIER_SWITCH
+  COMP_PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS
   CARRIER_SWITCH_COST_COEF
   
   ; Counters and graphical representation
@@ -127,12 +129,12 @@ to set-constants
 
   set CARRIER_RED_PRICE_IN   218
   set CARRIER_RED_PRICE_OUT  318
-  set CARRIER_RED_MAX_DISCOUNT  15
+  set CARRIER_RED_MAX_DISCOUNT  10
   set CARRIER_RED_ENTRANCE_TICK  50
 
   set CARRIER_GREEN_PRICE_IN   160
   set CARRIER_GREEN_PRICE_OUT  360
-  set CARRIER_GREEN_MAX_DISCOUNT  30
+  set CARRIER_GREEN_MAX_DISCOUNT  25
   set CARRIER_GREEN_ENTRANCE_TICK  100
   
   ; Essential constants
@@ -143,10 +145,12 @@ to set-constants
   set DISCOUNT_GIVING_DURATION  150                         ; For how many ticks does Operator give out discounts
   set DISCOUNT_DURATION  30                                 ; How many ticks does received discount last.
   set MONTHLY_BILLS_COUNT-FOR_AVG  10                       ; How many of recent bills are used for averaging.
-  set PROB_CHECKING_BETTER_CARRIERS  25                     ; per mille (All probability values are per mille.)
-  set PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  180            ; per mille
 
-  set CARRIER_SWITCH_COST_COEF  5000                        ; roughly a price (i.e. in czech cents)
+  ; Carrier spreading and switching
+  set PROB_CUSTOMERS_CHECK_POSSIBILITIES  100               ; Probability that person checks possibilities of other carriers or to enter the market
+  set COMP_PROB_CARRIER_SWITCH  250                         ; Compound (with the above) prob. that he switches carrier if he is so inclined
+  set COMP_PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS  1000      ; Compound probability coeficient for computation of probability of new signups
+  set CARRIER_SWITCH_COST_COEF  10                          ; Roughly a price (i.e. in czech cents)
   
   ; Counters and graphical representation
   set STATS_SAMPLING_INTERVAL  4                            ; Used for displaying Carrier switches plot
@@ -431,11 +435,20 @@ to customers-make-choices
           ]
         ]
       ]
+      
+      ;;  Handle discounts 
+      if iniDiscountMonths > 0 [
+        set iniDiscountMonths  iniDiscountMonths - 1
+        if iniDiscountMonths = 0 [
+          set iniDiscount 0
+        ]
+      ]
     ]
     
     
     ;;  Check if it is worth it to subscribe to a new carrier
-    
+    if random 1000 < PROB_CUSTOMERS_CHECK_POSSIBILITIES [
+
       ; Find out which carrier will give him the lowest monthly bill
       let lowestPotentialBill 999999999
       let lowestPotentialCarrier 0
@@ -455,15 +468,9 @@ to customers-make-choices
       ]
         
       ifelse has-carrier [ ; Has a carrier already
-        ifelse iniDiscountMonths > 0 [
-          ;; If he has a discount, he can't leave the carrier, shorten the discount by a month
-          set iniDiscountMonths  iniDiscountMonths - 1
-          if iniDiscountMonths = 0 [
-            set iniDiscount 0
-          ]
-        ] [ ;; He has no discount currently
+        if iniDiscountMonths = 0 [ ;; He has no discount currently
           ; Check to change or subscribe to a new carrier only sometimes
-          if random 1000 < PROB_CHECKING_BETTER_CARRIERS [
+          if random 1000 < COMP_PROB_CARRIER_SWITCH  [
             let avgMonthlyBill  get-avgMonthlyBill
             
             if lowestPotentialBill < avgMonthlyBill [  ; There is cheaper carrier for him
@@ -483,17 +490,16 @@ to customers-make-choices
           ]
         ]
       ]
-      [ ; Does not have a carrier
-        
-        ;;  Subscribe to a carrier, if he wants to.
-        if mobileFriends > 0 [ ; If he has friends using mobile phones
+      [ ; Does not have a carrier - subscribe if he has friends with mobiles
+        if mobileFriends > 0 [
           ; Weigh his options to join or not to join this month
-          if random 1000 < (PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS * mobileFriends / friendsCount)  [
+          if random 1000 < (COMP_PROB_COEF_CARRIER_SIGNUP_WITH_FRIENDS * mobileFriends / friendsCount)  [
             ; Join the most sensible carrier
             join-carrier lowestPotentialCarrier
           ]
         ]
       ]
+    ]
   ]
 end
 
