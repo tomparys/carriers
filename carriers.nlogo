@@ -764,7 +764,7 @@ BUTTON
 200
 790
 Group people by carrier
-display-people-grouped-by-carrier
+display-layout-people-grouped-by-carrier
 T
 1
 T
