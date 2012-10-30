@@ -23,15 +23,14 @@ globals [
   ; Carrier settings for this run
   CARRIER_BLUE_PRICE_IN
   CARRIER_BLUE_PRICE_OUT
-  CARRIER_BLUE_MAX_DISCOUNT
+  CARRIER_RED_ENTRANCE_TICK
   CARRIER_RED_PRICE_IN
   CARRIER_RED_PRICE_OUT
   CARRIER_RED_MAX_DISCOUNT
-  CARRIER_RED_ENTRANCE_TICK
+  CARRIER_GREEN_ENTRANCE_TICK
   CARRIER_GREEN_PRICE_IN
   CARRIER_GREEN_PRICE_OUT
   CARRIER_GREEN_MAX_DISCOUNT
-  CARRIER_GREEN_ENTRANCE_TICK
   
   ; Essential constants
   COST_1MIN
@@ -125,17 +124,16 @@ to set-constants
   ; Carrier settings for this run
   set CARRIER_BLUE_PRICE_IN   262
   set CARRIER_BLUE_PRICE_OUT  262
-  set CARRIER_BLUE_MAX_DISCOUNT  0
 
+  set CARRIER_RED_ENTRANCE_TICK  50
   set CARRIER_RED_PRICE_IN   218
   set CARRIER_RED_PRICE_OUT  318
   set CARRIER_RED_MAX_DISCOUNT  10
-  set CARRIER_RED_ENTRANCE_TICK  50
-
+  
+  set CARRIER_GREEN_ENTRANCE_TICK  100
   set CARRIER_GREEN_PRICE_IN   160
   set CARRIER_GREEN_PRICE_OUT  360
   set CARRIER_GREEN_MAX_DISCOUNT  25
-  set CARRIER_GREEN_ENTRANCE_TICK  100
   
   ; Essential constants
   set COST_1MIN      100        ; cost of 1 minute of calling for the operator
@@ -259,7 +257,7 @@ end
 ; ----- Handle creation of mobile carriers at preset times and with preset constants ---------------------------------------------------
 to handle-creation-of-mobile-carriers [nTicks]
   if nTicks = -1 [
-    create-mobile-carrier blue CARRIER_BLUE_PRICE_IN CARRIER_BLUE_PRICE_OUT CARRIER_BLUE_MAX_DISCOUNT
+    create-mobile-carrier blue CARRIER_BLUE_PRICE_IN CARRIER_BLUE_PRICE_OUT 0
   ]
   if nTicks = CARRIER_RED_ENTRANCE_TICK [
     create-mobile-carrier red CARRIER_RED_PRICE_IN CARRIER_RED_PRICE_OUT CARRIER_RED_MAX_DISCOUNT
@@ -1380,6 +1378,20 @@ NetLogo 5.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-persons">
       <value value="300"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="Nash-2-carriers" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="randSN-layoutGrouped">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="socialNetworkType">
+      <value value="&quot;Two-Circles&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="nOfPeople">
+      <value value="1000"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
