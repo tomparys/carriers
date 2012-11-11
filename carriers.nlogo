@@ -333,7 +333,7 @@ end
 ; ----- Go --------------------------------------------------------------------------------------
 to go
   ;; Check if equilibrium was reached
-  if ticks > 200 [
+  if ticks >= 300 [
     let sumSwitches  sum carrierSwitchesLongterm
     
     if equilibriumNearlyReachedAt = 0 and sumSwitches < 5 [
@@ -602,12 +602,29 @@ to display-layout-people-grouped-by-carrier
 end
 
 
-to-report get-carrier-subscribersCount [cColor]
-  ifelse any? carriers with [color = cColor]
-    [report [subscribersCount] of carriers with [color = blue]]
-    [report -1]
+; ------- Helper methods for BehaviorSpace -----------------------------------------------------------
+
+to-report reportCarrierData [cColor]
+  let rep  (list (colorString cColor))
+  
+  ifelse any? carriers with [color = cColor] [
+    set rep  lput true rep
+    set rep  lput (item 0 ([subscribersCount] of carriers with [color = cColor])) rep
+    set rep  lput round (item 0 ([curIncome] of carriers with [color = cColor])) rep
+    set rep  lput round (item 0 ([accIncome] of carriers with [color = cColor])) rep
+  ] [
+    set rep  lput false rep
+  ]
+  
+  report rep
 end
 
+to-report colorString [cColor]
+  if cColor = blue [report "blue"]
+  if cColor = red [report "red"]
+  if cColor = green [report "green"]
+  report "other"
+end
 
 
 ; ----------------------------------------------------------------------------------------------------
@@ -914,10 +931,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (accIncome-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (accIncome / 100)\n]"
 
 MONITOR
-11
-324
-143
-369
+8
+575
+176
+620
 NIL
 equilibriumReachedAt
 17
@@ -925,10 +942,10 @@ equilibriumReachedAt
 11
 
 MONITOR
-11
-375
-178
-420
+8
+626
+175
+671
 NIL
 equilibriumNearlyReachedAt
 17
@@ -1237,13 +1254,12 @@ NetLogo 5.0
   <experiment name="Nash-2-carriers-v1" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
-    <timeLimit steps="700"/>
-    <metric>[curIncome] of carriers with [color = blue]</metric>
-    <metric>[accIncome] of carriers with [color = blue]</metric>
-    <metric>[subscribersCount] of carriers with [color = blue]</metric>
-    <metric>[curIncome] of carriers with [color = red]</metric>
-    <metric>[accIncome] of carriers with [color = red]</metric>
-    <metric>[subscribersCount] of carriers with [color = red]</metric>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="450"/>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
@@ -1256,7 +1272,12 @@ NetLogo 5.0
   <experiment name="Nash-2-carriers-v1-test" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
-    <metric>get-carrier-subscribersCount blue</metric>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
@@ -1264,6 +1285,24 @@ NetLogo 5.0
     </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
+  </experiment>
+  <experiment name="Nash-2-carriers-v1-test2" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="1000" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="1000" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="1000" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="1000" last="450"/>
     <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
   </experiment>
 </experiments>
