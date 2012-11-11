@@ -9,8 +9,6 @@
 
 
 globals [
-  BEHAVIORAL_SPACE_EXPERIMENT
-  
   ; Variables, computed each turn
   totalMobileSubscribers
   carrierSwitchesNow
@@ -51,6 +49,12 @@ globals [
   
   ; Counters and graphical representation
   STATS_SAMPLING_INTERVAL
+  
+  ; BehaviorSpace
+  BEHAVIORAL_SPACE_EXPERIMENT  ; true/false
+  equilibriumReachedAt
+  equilibriumNearlyReachedAt
+  carrierSwitchesLongterm
 ]
 
 
@@ -106,9 +110,11 @@ directed-link-breed [subscribers subscriber]
 ; ----- Setup --------------------------------------------------------------------------------------
 to setup [as_behavioral_space_experiment]
   clear-all
-
   set BEHAVIORAL_SPACE_EXPERIMENT  as_behavioral_space_experiment
   set-constants
+
+  ; BehavioralSpace setup
+  set carrierSwitchesLongterm  []
   
   ;; Create social network
   ifelse socialNetworkType = "Two-Circles"
@@ -326,10 +332,25 @@ end
 
 ; ----- Go --------------------------------------------------------------------------------------
 to go
+  ;; Check if equilibrium was reached
+  if ticks > 200 [
+    let sumSwitches  sum carrierSwitchesLongterm
+    
+    if equilibriumNearlyReachedAt = 0 and sumSwitches < 5 [
+      set equilibriumNearlyReachedAt  ticks
+    ]
+    if equilibriumReachedAt = 0 and sumSwitches = 0 [
+      set equilibriumReachedAt  ticks
+      stop
+    ]
+  ]
+  
+  
   customers-make-choices
   
   handle-creation-of-mobile-carriers ticks
   carriers-make-choices
+  
   
   ;;  Counters and graphical representation
   color-friend-links-based-on-common-carrier
@@ -338,6 +359,11 @@ to go
   if ticks mod STATS_SAMPLING_INTERVAL = 0 [
     set carrierSwitchesNowAvg carrierSwitchesNow
     set carrierSwitchesNow 0
+    
+    set carrierSwitchesLongterm  lput carrierSwitchesNowAvg carrierSwitchesLongterm
+    if length carrierSwitchesLongterm > 25 [
+      set carrierSwitchesLongterm  remove-item 0 carrierSwitchesLongterm
+    ]
   ] 
   if totalMobileSubscribers < nOfPeople [
     set totalMobileSubscribers  count people with [count out-subscriber-neighbors > 0]
@@ -887,6 +913,28 @@ false
 PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (accIncome-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (accIncome / 100)\n]"
 
+MONITOR
+11
+324
+143
+369
+NIL
+equilibriumReachedAt
+17
+1
+11
+
+MONITOR
+11
+375
+178
+420
+NIL
+equilibriumNearlyReachedAt
+17
+1
+11
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -1196,9 +1244,6 @@ NetLogo 5.0
     <metric>[curIncome] of carriers with [color = red]</metric>
     <metric>[accIncome] of carriers with [color = red]</metric>
     <metric>[subscribersCount] of carriers with [color = red]</metric>
-    <enumeratedValueSet variable="BEHAVIORAL_SPACE_EXPERIMENT">
-      <value value="true"/>
-    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="450"/>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
@@ -1211,11 +1256,7 @@ NetLogo 5.0
   <experiment name="Nash-2-carriers-v1-test" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
-    <timeLimit steps="700"/>
     <metric>get-carrier-subscribersCount blue</metric>
-    <enumeratedValueSet variable="BEHAVIORAL_SPACE_EXPERIMENT">
-      <value value="true"/>
-    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
