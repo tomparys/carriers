@@ -104,8 +104,10 @@ directed-link-breed [subscribers subscriber]
 
 
 ; ----- Setup --------------------------------------------------------------------------------------
-to setup
+to setup [as_behavioral_space_experiment]
   clear-all
+
+  set BEHAVIORAL_SPACE_EXPERIMENT  as_behavioral_space_experiment
   set-constants
   
   ;; Create social network
@@ -124,7 +126,7 @@ end
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
   ; Carrier settings for this run
-  ifelse BEHAVIORAL_SPACE_EXPERIMENT = true [
+  ifelse BEHAVIORAL_SPACE_EXPERIMENT [
     ; Behavioral space experiment
     set CARRIER_GREEN_ENTRANCE_TICK  -2
   ] [
@@ -655,8 +657,8 @@ BUTTON
 36
 151
 69
-NIL
-setup
+Setup
+setup false
 NIL
 1
 T
@@ -1185,7 +1187,7 @@ NetLogo 5.0
 @#$#@#$#@
 <experiments>
   <experiment name="Nash-2-carriers-v1" repetitions="5" runMetricsEveryStep="false">
-    <setup>setup</setup>
+    <setup>setup true</setup>
     <go>go</go>
     <timeLimit steps="700"/>
     <metric>[curIncome] of carriers with [color = blue]</metric>
@@ -1207,7 +1209,7 @@ NetLogo 5.0
     <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="5" last="50"/>
   </experiment>
   <experiment name="Nash-2-carriers-v1-test" repetitions="5" runMetricsEveryStep="false">
-    <setup>setup</setup>
+    <setup>setup true</setup>
     <go>go</go>
     <timeLimit steps="700"/>
     <metric>get-carrier-subscribersCount blue</metric>
