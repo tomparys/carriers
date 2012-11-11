@@ -109,7 +109,8 @@ directed-link-breed [subscribers subscriber]
 
 ; ----- Setup --------------------------------------------------------------------------------------
 to setup [as_behavioral_space_experiment]
-  clear-all
+  clear-almost-all
+
   set BEHAVIORAL_SPACE_EXPERIMENT  as_behavioral_space_experiment
   set-constants
 
@@ -126,6 +127,17 @@ to setup [as_behavioral_space_experiment]
   handle-creation-of-mobile-carriers -1
 
   reset-ticks
+end
+
+
+to clear-almost-all
+  clear-all-plots
+  clear-drawing
+  clear-links
+  clear-output
+  clear-patches
+  clear-ticks
+  clear-turtles
 end
 
 
@@ -1296,13 +1308,13 @@ NetLogo 5.0
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
-    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="1000" last="300"/>
-    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="1000" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="300" step="1000" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="450" step="1000" last="450"/>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
       <value value="70"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="1000" last="300"/>
-    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="1000" last="450"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="300" step="1000" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="450" step="1000" last="450"/>
     <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
   </experiment>
 </experiments>
