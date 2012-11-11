@@ -9,6 +9,8 @@
 
 
 globals [
+  BEHAVIORAL_SPACE_EXPERIMENT
+  
   ; Variables, computed each turn
   totalMobileSubscribers
   carrierSwitchesNow
@@ -122,18 +124,24 @@ end
 ; ----- Set constants -----------------------------------------------------------------------------------
 to set-constants
   ; Carrier settings for this run
-  set CARRIER_BLUE_PRICE_IN   262
-  set CARRIER_BLUE_PRICE_OUT  262
-
-  set CARRIER_RED_ENTRANCE_TICK  50
-  set CARRIER_RED_PRICE_IN   218
-  set CARRIER_RED_PRICE_OUT  318
-  set CARRIER_RED_MAX_DISCOUNT  10
+  ifelse BEHAVIORAL_SPACE_EXPERIMENT = true [
+    ; Behavioral space experiment
+    set CARRIER_GREEN_ENTRANCE_TICK  -2
+  ] [
+    ; Individual run
+    set CARRIER_BLUE_PRICE_IN   262
+    set CARRIER_BLUE_PRICE_OUT  262
   
-  set CARRIER_GREEN_ENTRANCE_TICK  100
-  set CARRIER_GREEN_PRICE_IN   160
-  set CARRIER_GREEN_PRICE_OUT  360
-  set CARRIER_GREEN_MAX_DISCOUNT  25
+    set CARRIER_RED_ENTRANCE_TICK  70
+    set CARRIER_RED_PRICE_IN   218
+    set CARRIER_RED_PRICE_OUT  318
+    set CARRIER_RED_MAX_DISCOUNT  10
+    
+    set CARRIER_GREEN_ENTRANCE_TICK  140
+    set CARRIER_GREEN_PRICE_IN   160
+    set CARRIER_GREEN_PRICE_OUT  360
+    set CARRIER_GREEN_MAX_DISCOUNT  25
+  ]
   
   ; Essential constants
   set COST_1MIN      100        ; cost of 1 minute of calling for the operator
@@ -563,6 +571,13 @@ end
 to display-layout-people-grouped-by-carrier
     layout-spring people (friends with [color != grey]) 1 1 1
     display
+end
+
+
+to-report get-carrier-subscribersCount [cColor]
+  ifelse any? carriers with [color = cColor]
+    [report [subscribersCount] of carriers with [color = blue]]
+    [report -1]
 end
 
 
@@ -1169,230 +1184,44 @@ NetLogo 5.0
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="spread1" repetitions="100" runMetricsEveryStep="true">
+  <experiment name="Nash-2-carriers-v1" repetitions="5" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>count persons with [netmember?]</metric>
-    <enumeratedValueSet variable="random-join?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-friendships">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="spread2" repetitions="100" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>netmember-avg-friend-count</metric>
-    <metric>all-persons-avg-friend-count</metric>
-    <enumeratedValueSet variable="random-join?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-friendships">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="spread3" repetitions="100" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>netmember-avg-be-point</metric>
-    <metric>all-persons-avg-be-point</metric>
-    <enumeratedValueSet variable="random-join?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-friendships">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="random-join1" repetitions="1" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>count persons with [netmember?]</metric>
-    <enumeratedValueSet variable="random-join?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="number-of-friendships" first="50" step="2" last="500"/>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="random-join2" repetitions="1" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>count persons with [netmember?]</metric>
-    <enumeratedValueSet variable="random-join?">
+    <timeLimit steps="700"/>
+    <metric>[curIncome] of carriers with [color = blue]</metric>
+    <metric>[accIncome] of carriers with [color = blue]</metric>
+    <metric>[subscribersCount] of carriers with [color = blue]</metric>
+    <metric>[curIncome] of carriers with [color = red]</metric>
+    <metric>[accIncome] of carriers with [color = red]</metric>
+    <metric>[subscribersCount] of carriers with [color = red]</metric>
+    <enumeratedValueSet variable="BEHAVIORAL_SPACE_EXPERIMENT">
       <value value="true"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="number-of-friendships" first="50" step="2" last="500"/>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="25" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="25" last="450"/>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="5" last="50"/>
   </experiment>
-  <experiment name="random-join-584" repetitions="100" runMetricsEveryStep="true">
+  <experiment name="Nash-2-carriers-v1-test" repetitions="5" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>all-persons-avg-friend-count</metric>
-    <enumeratedValueSet variable="random-join?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-friendships">
-      <value value="584"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="bottleneck" repetitions="10" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>bottleneck</go>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>all-persons-avg-friend-count</metric>
-    <metric>bottleneck-avg-friend-count</metric>
-    <metric>all-persons-avg-be-point</metric>
-    <metric>bottleneck-avg-be-point</metric>
-    <metric>count persons with [bottleneck?]</metric>
-    <metric>count persons with [not invited?]</metric>
-    <steppedValueSet variable="number-of-friendships" first="50" step="10" last="500"/>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="random-join?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="100"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="margin">
-      <value value="0.3"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="max-profit1" repetitions="50" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="50"/>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>network-profit</metric>
-    <metric>network-sale-revenue</metric>
-    <metric>network-fee-revenue</metric>
-    <metric>network-sponsor-cost</metric>
-    <metric>network-manufacturing-cost</metric>
-    <steppedValueSet variable="margin" first="0.01" step="0.01" last="0.6"/>
-    <enumeratedValueSet variable="manufacturing-cost">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-friendships">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="0"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="random-join?">
+    <timeLimit steps="700"/>
+    <metric>get-carrier-subscribersCount blue</metric>
+    <enumeratedValueSet variable="BEHAVIORAL_SPACE_EXPERIMENT">
       <value value="true"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
     </enumeratedValueSet>
-  </experiment>
-  <experiment name="max-profit2" repetitions="100" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="50"/>
-    <exitCondition>net-stable?</exitCondition>
-    <metric>network-profit</metric>
-    <metric>network-sale-revenue</metric>
-    <metric>network-fee-revenue</metric>
-    <metric>network-sponsor-cost</metric>
-    <metric>network-manufacturing-cost</metric>
-    <metric>count persons with [netmember?]</metric>
-    <steppedValueSet variable="margin" first="0.05" step="0.01" last="0.9"/>
-    <enumeratedValueSet variable="manufacturing-cost">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-friendships">
-      <value value="300"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="monthly-fee">
-      <value value="0"/>
-      <value value="50"/>
-      <value value="100"/>
-      <value value="150"/>
-      <value value="200"/>
-      <value value="250"/>
-      <value value="300"/>
-      <value value="350"/>
-      <value value="400"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="random-join?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-persons">
-      <value value="300"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="Nash-2-carriers" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count turtles</metric>
-    <enumeratedValueSet variable="randSN-layoutGrouped">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="socialNetworkType">
-      <value value="&quot;Two-Circles&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nOfPeople">
-      <value value="1000"/>
-    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
   </experiment>
 </experiments>
 @#$#@#$#@
