@@ -294,7 +294,7 @@ allReach
 allReach
 1
 30
-15
+25
 1
 1
 NIL
@@ -331,7 +331,7 @@ nOfAgents
 nOfAgents
 0
 1000
-1000
+300
 5
 1
 NIL
@@ -372,7 +372,7 @@ blueReach
 blueReach
 10
 100
-30
+50
 5
 1
 NIL

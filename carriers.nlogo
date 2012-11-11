@@ -167,8 +167,8 @@ end
 to create-social-network-two-circles
   ;; Constants
   let Bigs% 30
-  let bigReach 30
-  let allReach 18
+  let bigReach 50
+  let allReach 25
   
   let nOfBigs Bigs% * nOfPeople / 100
   let nOfSmalls nOfPeople - nOfBigs
@@ -642,9 +642,9 @@ SLIDER
 249
 nOfPeople
 nOfPeople
+100
 500
-1500
-1000
+300
 10
 1
 NIL
