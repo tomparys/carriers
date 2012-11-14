@@ -109,7 +109,7 @@ directed-link-breed [subscribers subscriber]
 
 ; ----- Setup --------------------------------------------------------------------------------------
 to setup [as_behavioral_space_experiment]
-  clear-almost-all
+  clear-environment
 
   set BEHAVIORAL_SPACE_EXPERIMENT  as_behavioral_space_experiment
   set-constants
@@ -130,7 +130,8 @@ to setup [as_behavioral_space_experiment]
 end
 
 
-to clear-almost-all
+; ----- Clear things after the last run ----------------------------------------------------------------
+to clear-environment
   clear-all-plots
   clear-drawing
   clear-links
@@ -138,6 +139,13 @@ to clear-almost-all
   clear-patches
   clear-ticks
   clear-turtles
+  
+  ;; Clear global variables
+  set totalMobileSubscribers  0
+  set carrierSwitchesNow  0
+  set carrierSwitchesNowAvg  0
+  set equilibriumReachedAt  0
+  set equilibriumNearlyReachedAt  0
 end
 
 
