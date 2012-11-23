@@ -23,6 +23,8 @@ globals [
   ; Carrier settings for this run
   CARRIER_BLUE_PRICE_IN
   CARRIER_BLUE_PRICE_OUT
+  CARRIER_BLUE_PRICE_IN_2
+  CARRIER_BLUE_PRICE_OUT_2
   CARRIER_RED_ENTRANCE_TICK
   CARRIER_RED_PRICE_IN
   CARRIER_RED_PRICE_OUT
@@ -37,6 +39,7 @@ globals [
   ACCESS_CHARGE
   
   ; Constants
+  PRICE_RESPONSE_WAIT_TIME
   DISCOUNT_GIVING_DURATION
   DISCOUNT_DURATION
   MONTHLY_BILLS_COUNT-FOR_AVG
@@ -154,21 +157,23 @@ to set-constants
   ; Carrier settings for this run
   ifelse BEHAVIORAL_SPACE_EXPERIMENT [
     ; Behavioral space experiment
-    set CARRIER_GREEN_ENTRANCE_TICK  -2
+    set CARRIER_GREEN_ENTRANCE_TICK  -2  ; -1 is the setup round, les than that means never
   ] [
     ; Individual run
-    set CARRIER_BLUE_PRICE_IN   262
-    set CARRIER_BLUE_PRICE_OUT  262
+    set CARRIER_BLUE_PRICE_IN   362
+    set CARRIER_BLUE_PRICE_OUT  362
+    set CARRIER_BLUE_PRICE_IN_2   162
+    set CARRIER_BLUE_PRICE_OUT_2  162
   
     set CARRIER_RED_ENTRANCE_TICK  70
-    set CARRIER_RED_PRICE_IN   218
-    set CARRIER_RED_PRICE_OUT  318
     set CARRIER_RED_MAX_DISCOUNT  10
+    set CARRIER_RED_PRICE_IN   210
+    set CARRIER_RED_PRICE_OUT  300
     
-    set CARRIER_GREEN_ENTRANCE_TICK  140
+    set CARRIER_GREEN_ENTRANCE_TICK  -140
+    set CARRIER_GREEN_MAX_DISCOUNT  25
     set CARRIER_GREEN_PRICE_IN   160
     set CARRIER_GREEN_PRICE_OUT  360
-    set CARRIER_GREEN_MAX_DISCOUNT  25
   ]
   
   ; Essential constants
@@ -176,6 +181,7 @@ to set-constants
   set ACCESS_CHARGE  150        ; price paid to other carrier for connecting a call to his network per minute
   
   ; Other
+  set PRICE_RESPONSE_WAIT_TIME  20                          ; How long do old carriers wait to do a price adjustment after new one enters the market
   set DISCOUNT_GIVING_DURATION  150                         ; For how many ticks does Operator give out discounts
   set DISCOUNT_DURATION  60                                 ; How many ticks does received discount last.
   set MONTHLY_BILLS_COUNT-FOR_AVG  10                       ; How many of recent bills are used for averaging.
@@ -302,6 +308,16 @@ to handle-creation-of-mobile-carriers [nTicks]
   if nTicks = CARRIER_GREEN_ENTRANCE_TICK [
     create-mobile-carrier green CARRIER_GREEN_PRICE_IN CARRIER_GREEN_PRICE_OUT CARRIER_GREEN_MAX_DISCOUNT
     ; TODO - already existing carrier(s) price reaction
+  ]
+  
+  ; Handle the price change in response by the old carriers
+  if nTicks = CARRIER_RED_ENTRANCE_TICK + PRICE_RESPONSE_WAIT_TIME [
+    if CARRIER_BLUE_PRICE_IN_2 != 0 [
+      ask carriers with [color = blue] [
+        set priceIn  CARRIER_BLUE_PRICE_IN_2
+        set priceOut  CARRIER_BLUE_PRICE_OUT_2
+      ]
+    ]
   ]
 end
 
@@ -1282,12 +1298,15 @@ NetLogo 5.0
     <metric>reportCarrierData green</metric>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="450"/>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
+      <value value="0"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
       <value value="70"/>
     </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="5" last="50"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="25" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="25" last="450"/>
-    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="5" last="50"/>
   </experiment>
   <experiment name="Nash-2car-v1-sampling1" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
@@ -1300,14 +1319,17 @@ NetLogo 5.0
     <metric>reportCarrierData green</metric>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
+      <value value="0"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
       <value value="70"/>
     </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
-    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
   </experiment>
-  <experiment name="Nash-2car-v1-test" repetitions="5" runMetricsEveryStep="false">
+  <experiment name="Nash-2car-test" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
     <metric>equilibriumReachedAt</metric>
@@ -1318,6 +1340,8 @@ NetLogo 5.0
     <metric>reportCarrierData green</metric>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="300" step="1000" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="450" step="1000" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="300" step="1000" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="450" step="1000" last="450"/>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
       <value value="70"/>
     </enumeratedValueSet>
@@ -1336,12 +1360,55 @@ NetLogo 5.0
     <metric>reportCarrierData green</metric>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
+      <value value="0"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
       <value value="70"/>
     </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="10" last="50"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="50" last="450"/>
+  </experiment>
+  <experiment name="Nash-2car-v2-sampling1" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="300" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="450" step="100" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
+  </experiment>
+  <experiment name="Nash-2car-v2-sampling2" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="250" step="50" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="10" last="50"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="50" last="450"/>
   </experiment>
 </experiments>
 @#$#@#$#@
