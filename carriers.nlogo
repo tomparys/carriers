@@ -165,18 +165,18 @@ to set-constants
     ; Individual run
     set CARRIER_BLUE_PRICE_IN   362
     set CARRIER_BLUE_PRICE_OUT  362
-    set CARRIER_BLUE_PRICE_IN_2   162
-    set CARRIER_BLUE_PRICE_OUT_2  162
+    set CARRIER_BLUE_PRICE_IN_2   200
+    set CARRIER_BLUE_PRICE_OUT_2  200
   
     set CARRIER_RED_ENTRANCE_TICK  70
     set CARRIER_RED_MAX_DISCOUNT  10
     set CARRIER_RED_PRICE_IN   210
-    set CARRIER_RED_PRICE_OUT  300
+    set CARRIER_RED_PRICE_OUT  250
     
-    set CARRIER_GREEN_ENTRANCE_TICK  -140
+    set CARRIER_GREEN_ENTRANCE_TICK  140
     set CARRIER_GREEN_MAX_DISCOUNT  25
     set CARRIER_GREEN_PRICE_IN   160
-    set CARRIER_GREEN_PRICE_OUT  360
+    set CARRIER_GREEN_PRICE_OUT  200
   ]
   
   ; Essential constants
@@ -289,7 +289,7 @@ to setup-people
 
   ask people [
     ;; Values set in czech cents and minutes. Data are roughly aligned with what statistics say about czech mobile phone users.
-    set income  random-normal-min 70000 30000 5000
+    set income  random-normal-min 50000 25000 5000
 
     let talkativenessCentre  (175 * friendsCount / avgFriendsCount)
     set talkativeness  random-normal-min talkativenessCentre (talkativenessCentre / 5) 20
@@ -307,14 +307,12 @@ to handle-creation-of-mobile-carriers [nTicks]
   ]
   if nTicks = CARRIER_RED_ENTRANCE_TICK [
     create-mobile-carrier red CARRIER_RED_PRICE_IN CARRIER_RED_PRICE_OUT CARRIER_RED_MAX_DISCOUNT
-    ; TODO - already existing carrier(s) price reaction
   ]
   if nTicks = CARRIER_GREEN_ENTRANCE_TICK [
     create-mobile-carrier green CARRIER_GREEN_PRICE_IN CARRIER_GREEN_PRICE_OUT CARRIER_GREEN_MAX_DISCOUNT
-    ; TODO - already existing carrier(s) price reaction
   ]
   
-  ; Handle the price change in response by the old carriers
+  ; Handle the price change in response to the new Red by the old Blue carrier
   if nTicks = CARRIER_RED_ENTRANCE_TICK + PRICE_RESPONSE_WAIT_TIME [
     if CARRIER_BLUE_PRICE_IN_2 != 0 [
       ask carriers with [color = blue] [
