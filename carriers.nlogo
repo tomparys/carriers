@@ -163,17 +163,17 @@ to set-constants
     set CARRIER_GREEN_ENTRANCE_TICK  -2  ; -1 is the setup round, les than that means never
   ] [
     ; Individual run
-    set CARRIER_BLUE_PRICE_IN   362
-    set CARRIER_BLUE_PRICE_OUT  362
+    set CARRIER_BLUE_PRICE_IN   100
+    set CARRIER_BLUE_PRICE_OUT  350
     set CARRIER_BLUE_PRICE_IN_2   200
-    set CARRIER_BLUE_PRICE_OUT_2  200
+    set CARRIER_BLUE_PRICE_OUT_2  250
   
     set CARRIER_RED_ENTRANCE_TICK  70
-    set CARRIER_RED_MAX_DISCOUNT  10
-    set CARRIER_RED_PRICE_IN   210
-    set CARRIER_RED_PRICE_OUT  250
+    set CARRIER_RED_MAX_DISCOUNT  50
+    set CARRIER_RED_PRICE_IN   200
+    set CARRIER_RED_PRICE_OUT  350
     
-    set CARRIER_GREEN_ENTRANCE_TICK  140
+    set CARRIER_GREEN_ENTRANCE_TICK  -140
     set CARRIER_GREEN_MAX_DISCOUNT  25
     set CARRIER_GREEN_PRICE_IN   160
     set CARRIER_GREEN_PRICE_OUT  200
@@ -1459,6 +1459,36 @@ NetLogo 5.0.3
     <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="50" last="450"/>
+  </experiment>
+  <experiment name="Monopoly-Blue-v1" repetitions="10" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="400"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="600"/>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_OUT_2">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="-2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_MAX_DISCOUNT">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_PRICE_IN">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_PRICE_OUT">
+      <value value="0"/>
+    </enumeratedValueSet>
   </experiment>
 </experiments>
 @#$#@#$#@
