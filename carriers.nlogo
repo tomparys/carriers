@@ -37,6 +37,7 @@ globals [
   ; Essential constants
   COST_1MIN
   ACCESS_CHARGE
+  INCOME_DISCOUNT_RATE
   
   ; Constants
   PRICE_RESPONSE_WAIT_TIME
@@ -80,6 +81,7 @@ carriers-own [
   curRevenue              ; current monthly revenue (money paid by customers, costs are not yet deducted)
   curIncome               ; current monthly income
   accIncome               ; accumulated income - sum of past earnings
+  accIncomeDiscounted     ; accumulated time-discounted income
   minsSupplied            ; how many minutes of calling the carrier supplied to its customers
   accessChargeBalance     ; how many minutes of access charge will carrier pay (or will be payed if < 0) at the end of the month
   
@@ -92,6 +94,7 @@ carriers-own [
   ; Temp, counters and graphical representation
   curIncome-last
   accIncome-last
+  accIncomeDiscounted-last
   subscribersCount
   subscribersCount-last
   iniCurrentDiscount-last
@@ -177,8 +180,9 @@ to set-constants
   ]
   
   ; Essential constants
-  set COST_1MIN      100        ; cost of 1 minute of calling for the operator
-  set ACCESS_CHARGE  150        ; price paid to other carrier for connecting a call to his network per minute
+  set COST_1MIN             100        ; cost of 1 minute of calling for the operator
+  set ACCESS_CHARGE         150        ; price paid to other carrier for connecting a call to his network per minute
+  set INCOME_DISCOUNT_RATE  0.02       ; discount factor for accumulated earnings over time
   
   ; Other
   set PRICE_RESPONSE_WAIT_TIME  20                          ; How long do old carriers wait to do a price adjustment after new one enters the market
@@ -336,6 +340,8 @@ to create-mobile-carrier [tColor tPriceIn tPriceOut tIniMaxDiscount]
     set curIncome-last  0
     set accIncome  0
     set accIncome-last  0
+    set accIncomeDiscounted  0
+    set accIncomeDiscounted-last  0
     set minsSupplied  0
     set accessChargeBalance  0 
 
@@ -432,10 +438,12 @@ to carriers-make-choices
   ask carriers [
     set curIncome-last  curIncome
     set accIncome-last  accIncome
+    set accIncomeDiscounted-last  accIncomeDiscounted
     
     let curCosts  minsSupplied * COST_1MIN + accessChargeBalance * ACCESS_CHARGE   ; costs can be negative, if he has negative accessChargeBalance!
     set curIncome  curRevenue - curCosts
     set accIncome  accIncome + curIncome
+    set accIncomeDiscounted  (computeAccIncomeDiscounted accIncomeDiscounted curIncome)
 
     ; Reset variables that are filled in customers-make-choices between runs of this function carriers-make-choices
     set curRevenue  0
@@ -582,6 +590,11 @@ end
 ; ----------------------------------------------------------------------------------------------------
 
 
+to-report computeAccIncomeDiscounted [tAccIncomeDiscounted tCurIncome]
+  set tAccIncomeDiscounted  tAccIncomeDiscounted / (1 + INCOME_DISCOUNT_RATE)
+  report tAccIncomeDiscounted + tCurIncome
+end
+
 to join-carrier [t-carrier]  ; person-turtle method
   ask my-out-subscribers [die] ; Unsubscribe from the old carrier if by chance he has one
   create-subscriber-to t-carrier [hide-link]
@@ -648,6 +661,7 @@ to-report reportCarrierData [cColor]
     set rep  lput (item 0 ([subscribersCount] of carriers with [color = cColor])) rep
     set rep  lput round (item 0 ([curIncome] of carriers with [color = cColor])) rep
     set rep  lput round (item 0 ([accIncome] of carriers with [color = cColor])) rep
+    set rep  lput round (item 0 ([accIncomeDiscounted] of carriers with [color = cColor])) rep
   ] [
     set rep  lput false rep
   ]
@@ -673,13 +687,13 @@ to debug-test
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-196
+197
 10
-799
-634
+791
+625
 157
 157
-1.883
+1.854
 1
 1
 1
@@ -776,9 +790,9 @@ Setup variables
 1
 
 MONITOR
-332
+331
 698
-460
+459
 743
 Carrier customers
 totalMobileSubscribers
@@ -987,6 +1001,24 @@ equilibriumNearlyReachedAt
 17
 1
 11
+
+PLOT
+465
+633
+804
+800
+Accumulated Income Discounted / 100
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (accIncomeDiscounted-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (accIncomeDiscounted / 100)\n]"
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1282,7 +1314,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.0
+NetLogo 5.0.3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
