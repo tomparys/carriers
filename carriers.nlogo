@@ -53,6 +53,7 @@ globals [
   
   ; Counters and graphical representation
   STATS_SAMPLING_INTERVAL
+  ;DISCOUNTING_CURRENT_EXPONENT - commented out
   
   ; BehaviorSpace
   BEHAVIORAL_SPACE_EXPERIMENT  ; true/false
@@ -163,15 +164,15 @@ to set-constants
     set CARRIER_GREEN_ENTRANCE_TICK  -2  ; -1 is the setup round, les than that means never
   ] [
     ; Individual run
-    set CARRIER_BLUE_PRICE_IN   100
+    set CARRIER_BLUE_PRICE_IN   200
     set CARRIER_BLUE_PRICE_OUT  350
-    set CARRIER_BLUE_PRICE_IN_2   200
+    set CARRIER_BLUE_PRICE_IN_2   150
     set CARRIER_BLUE_PRICE_OUT_2  250
   
     set CARRIER_RED_ENTRANCE_TICK  70
-    set CARRIER_RED_MAX_DISCOUNT  50
-    set CARRIER_RED_PRICE_IN   200
-    set CARRIER_RED_PRICE_OUT  350
+    set CARRIER_RED_MAX_DISCOUNT  30
+    set CARRIER_RED_PRICE_IN   250
+    set CARRIER_RED_PRICE_OUT  250
     
     set CARRIER_GREEN_ENTRANCE_TICK  -140
     set CARRIER_GREEN_MAX_DISCOUNT  25
@@ -198,6 +199,7 @@ to set-constants
   
   ; Counters and graphical representation
   set STATS_SAMPLING_INTERVAL  4                            ; Used for displaying Carrier switches plot
+  ;set DISCOUNTING_CURRENT_EXPONENT 1 - currently unused
 end
 
 
@@ -390,7 +392,6 @@ to go
   
   handle-creation-of-mobile-carriers ticks
   carriers-make-choices
-  
   
   ;;  Counters and graphical representation
   color-friend-links-based-on-common-carrier
@@ -591,6 +592,13 @@ end
 to-report computeAccIncomeDiscounted [tAccIncomeDiscounted tCurIncome]
   set tAccIncomeDiscounted  tAccIncomeDiscounted / (1 + INCOME_DISCOUNT_RATE)
   report tAccIncomeDiscounted + tCurIncome
+  
+  ;set tAccIncomeDiscounted  tAccIncomeDiscounted + tCurIncome / ((1 + INCOME_DISCOUNT_RATE) ^ DISCOUNTING_CURRENT_EXPONENT)
+  ; Warning, DISCOUNTING_CURRENT_EXPONENT is being augmented in the Go function
+    ; Discounted Income calculation
+    ;if ticks mod 10 = 0 [ set DISCOUNTING_CURRENT_EXPONENT  DISCOUNTING_CURRENT_EXPONENT + 1 ]
+
+  ;report tAccIncomeDiscounted
 end
 
 to join-carrier [t-carrier]  ; person-turtle method
@@ -1326,6 +1334,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="379403409"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="450"/>
     <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
@@ -1347,6 +1358,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-1691907116"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
     <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
@@ -1368,6 +1382,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-1030170355"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="300" step="1000" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="450" step="1000" last="450"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="300" step="1000" last="300"/>
@@ -1388,6 +1405,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-1793346600"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
     <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
@@ -1409,6 +1429,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-312590800"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="100" last="300"/>
@@ -1429,6 +1452,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-1119562889"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="50" last="300"/>
@@ -1449,6 +1475,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="1395684093"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="50" last="300"/>
@@ -1469,6 +1498,9 @@ NetLogo 5.0.3
     <metric>reportCarrierData blue</metric>
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="425758811"/>
+    </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="400"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="600"/>
     <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
@@ -1489,6 +1521,29 @@ NetLogo 5.0.3
     <enumeratedValueSet variable="CARRIER_RED_PRICE_OUT">
       <value value="0"/>
     </enumeratedValueSet>
+  </experiment>
+  <experiment name="Nash-2car-v2-sampling1-set-randomseed" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-888354803"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="250" step="100" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
   </experiment>
 </experiments>
 @#$#@#$#@
