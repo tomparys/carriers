@@ -169,14 +169,14 @@ to set-constants
     if CARRIER_RED_PRICE_OUT = -1 [ set CARRIER_RED_PRICE_OUT  CARRIER_BLUE_PRICE_OUT ]
   ] [
     ; Individual run
-    set CARRIER_BLUE_PRICE_IN   200
-    set CARRIER_BLUE_PRICE_OUT  350
-    set CARRIER_BLUE_PRICE_IN_2   150
-    set CARRIER_BLUE_PRICE_OUT_2  250
+    set CARRIER_BLUE_PRICE_IN   100
+    set CARRIER_BLUE_PRICE_OUT  450
+    set CARRIER_BLUE_PRICE_IN_2   100
+    set CARRIER_BLUE_PRICE_OUT_2  450
   
     set CARRIER_RED_ENTRANCE_TICK  70
     set CARRIER_RED_MAX_DISCOUNT  30
-    set CARRIER_RED_PRICE_IN   250
+    set CARRIER_RED_PRICE_IN   300
     set CARRIER_RED_PRICE_OUT  250
     
     set CARRIER_GREEN_ENTRANCE_TICK  -140
@@ -1599,6 +1599,39 @@ NetLogo 5.0.3
     <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="15" last="30"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="50" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="50" last="450"/>
+  </experiment>
+  <experiment name="Cartel-v1-sampling1" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-312590800"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="25" last="500"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="25" last="650"/>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
+      <value value="-1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_OUT_2">
+      <value value="-1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_MAX_DISCOUNT">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_PRICE_IN">
+      <value value="-1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_PRICE_OUT">
+      <value value="-1"/>
+    </enumeratedValueSet>
   </experiment>
 </experiments>
 @#$#@#$#@
