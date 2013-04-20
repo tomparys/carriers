@@ -162,6 +162,11 @@ to set-constants
   ifelse BEHAVIORAL_SPACE_EXPERIMENT [
     ; Behavioral space experiment
     set CARRIER_GREEN_ENTRANCE_TICK  -2  ; -1 is the setup round, les than that means never
+
+    if CARRIER_BLUE_PRICE_IN_2 = -1 [ set CARRIER_BLUE_PRICE_IN_2  CARRIER_BLUE_PRICE_IN ]
+    if CARRIER_BLUE_PRICE_OUT_2 = -1 [ set CARRIER_BLUE_PRICE_OUT_2  CARRIER_BLUE_PRICE_OUT ]
+    if CARRIER_RED_PRICE_IN = -1 [ set CARRIER_RED_PRICE_IN  CARRIER_BLUE_PRICE_IN ]
+    if CARRIER_RED_PRICE_OUT = -1 [ set CARRIER_RED_PRICE_OUT  CARRIER_BLUE_PRICE_OUT ]
   ] [
     ; Individual run
     set CARRIER_BLUE_PRICE_IN   200
@@ -1373,29 +1378,6 @@ NetLogo 5.0.3
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
   </experiment>
-  <experiment name="Nash-2car-test" repetitions="5" runMetricsEveryStep="false">
-    <setup>setup true</setup>
-    <go>go</go>
-    <metric>equilibriumReachedAt</metric>
-    <metric>equilibriumNearlyReachedAt</metric>
-    <metric>nOfPeople</metric>
-    <metric>reportCarrierData blue</metric>
-    <metric>reportCarrierData red</metric>
-    <metric>reportCarrierData green</metric>
-    <enumeratedValueSet variable="random-seed">
-      <value value="-1030170355"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="300" step="1000" last="300"/>
-    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="450" step="1000" last="450"/>
-    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="300" step="1000" last="300"/>
-    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="450" step="1000" last="450"/>
-    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
-      <value value="70"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="300" step="1000" last="300"/>
-    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="450" step="1000" last="450"/>
-    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
-  </experiment>
   <experiment name="Nash-2car-v1-sampling2" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
@@ -1522,7 +1504,7 @@ NetLogo 5.0.3
       <value value="0"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="Nash-2car-v2-sampling1-set-randomseed" repetitions="5" runMetricsEveryStep="false">
+  <experiment name="Nash-2car-noreaction-v1-sampling1" repetitions="5" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
     <metric>equilibriumReachedAt</metric>
@@ -1532,7 +1514,34 @@ NetLogo 5.0.3
     <metric>reportCarrierData red</metric>
     <metric>reportCarrierData green</metric>
     <enumeratedValueSet variable="random-seed">
-      <value value="-888354803"/>
+      <value value="-312590800"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_IN_2">
+      <value value="-1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_BLUE_PRICE_OUT_2">
+      <value value="-1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="15" last="30"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
+  </experiment>
+  <experiment name="Nash-2car-v3-sampling1" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-312590800"/>
     </enumeratedValueSet>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="100" last="450"/>
@@ -1541,9 +1550,55 @@ NetLogo 5.0.3
     <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
       <value value="70"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="25" last="50"/>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="15" last="30"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="100" last="300"/>
     <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="100" last="450"/>
+  </experiment>
+  <experiment name="Nash-2car-v3-sampling2" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="1395684093"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="250" step="50" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="15" last="30"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="50" last="450"/>
+  </experiment>
+  <experiment name="Nash-2car-v3-sampling3" repetitions="5" runMetricsEveryStep="false">
+    <setup>setup true</setup>
+    <go>go</go>
+    <metric>equilibriumReachedAt</metric>
+    <metric>equilibriumNearlyReachedAt</metric>
+    <metric>nOfPeople</metric>
+    <metric>reportCarrierData blue</metric>
+    <metric>reportCarrierData red</metric>
+    <metric>reportCarrierData green</metric>
+    <enumeratedValueSet variable="random-seed">
+      <value value="-1119562889"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT" first="250" step="50" last="450"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_IN_2" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_BLUE_PRICE_OUT_2" first="250" step="50" last="450"/>
+    <enumeratedValueSet variable="CARRIER_RED_ENTRANCE_TICK">
+      <value value="70"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="CARRIER_RED_MAX_DISCOUNT" first="0" step="15" last="30"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_IN" first="100" step="50" last="300"/>
+    <steppedValueSet variable="CARRIER_RED_PRICE_OUT" first="250" step="50" last="450"/>
   </experiment>
 </experiments>
 @#$#@#$#@
