@@ -123,6 +123,7 @@ to setup [as_behavioral_space_experiment]
 
   ; BehavioralSpace setup
   set carrierSwitchesLongterm  []
+  if BEHAVIORAL_SPACE_EXPERIMENT [ set stop_after_equilibrium? true ]
   
   ;; Create social network
   ifelse socialNetworkType = "Two-Circles"
@@ -388,7 +389,7 @@ to go
     ]
     if equilibriumReachedAt = 0 and sumSwitches = 0 [
       set equilibriumReachedAt  ticks
-      stop
+      if stop_after_equilibrium? [stop]
     ]
   ]
   
@@ -1030,6 +1031,73 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (accIncomeDiscounted-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (accIncomeDiscounted / 100)\n]"
+
+MONITOR
+17
+442
+184
+487
+Red price out
+[priceOut] of one-of carriers with [color = red]
+17
+1
+11
+
+MONITOR
+16
+345
+172
+390
+Red price in
+[priceIn] of one-of carriers with [color = red]
+17
+1
+11
+
+BUTTON
+18
+300
+146
+333
+RED PRICE IN +
+ask carriers with [color = red] [\n  set priceIn  priceIn + 10\n]
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+17
+401
+157
+434
+RED PRICE OUT +
+ask carriers with [color = red] [\n  set priceOut  priceOut + 10\n]
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SWITCH
+7
+255
+192
+288
+stop_after_equilibrium?
+stop_after_equilibrium?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
