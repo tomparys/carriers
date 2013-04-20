@@ -60,6 +60,8 @@ globals [
   equilibriumReachedAt
   equilibriumNearlyReachedAt
   carrierSwitchesLongterm
+  experimentChainReaction-carrier
+  experimentChainReaction-waitForEquilibrium
 ]
 
 
@@ -118,12 +120,14 @@ directed-link-breed [subscribers subscriber]
 to setup [as_behavioral_space_experiment]
   clear-environment
 
+  ; Constants setup
   set BEHAVIORAL_SPACE_EXPERIMENT  as_behavioral_space_experiment
   set-constants
 
-  ; BehavioralSpace setup
+  ; Misc setup
   set carrierSwitchesLongterm  []
-  if BEHAVIORAL_SPACE_EXPERIMENT [ set stop_after_equilibrium? true ]
+  if BEHAVIORAL_SPACE_EXPERIMENT [ set stopAfterEquilibrium? true ]
+  if experimentChainReaction? [ set stopAfterEquilibrium? false ]
   
   ;; Create social network
   ifelse socialNetworkType = "Two-Circles"
@@ -154,6 +158,8 @@ to clear-environment
   set carrierSwitchesNowAvg  0
   set equilibriumReachedAt  0
   set equilibriumNearlyReachedAt  0
+  set experimentChainReaction-carrier  0
+  set experimentChainReaction-waitForEquilibrium  0
 end
 
 
@@ -382,16 +388,27 @@ end
 to go
   ;; Check if equilibrium was reached
   if ticks >= 300 [
-    let sumSwitches  sum carrierSwitchesLongterm
     
-    if equilibriumNearlyReachedAt = 0 and sumSwitches < 5 [
-      set equilibriumNearlyReachedAt  ticks
+    ifelse experimentChainReaction-waitForEquilibrium > 0
+    [
+      ; Chain reaction experiment just upped prices, wait for a bit till recounting equilibria
+      set experimentChainReaction-waitForEquilibrium  experimentChainReaction-waitForEquilibrium - 1
     ]
-    if equilibriumReachedAt = 0 and sumSwitches = 0 [
-      set equilibriumReachedAt  ticks
-      if stop_after_equilibrium? [stop]
+    [
+      let sumSwitches  sum carrierSwitchesLongterm
+    
+      if equilibriumNearlyReachedAt = 0 and sumSwitches < 5 [
+        set equilibriumNearlyReachedAt  ticks
+      ]
+      if equilibriumReachedAt = 0 and sumSwitches = 0 [
+        set equilibriumReachedAt  ticks
+        if stopAfterEquilibrium? [stop]
+      ]
     ]
   ]
+  
+  ;; Experiment with Chain reaction
+  if experimentChainReaction? [experimentChainReaction]
   
   
   customers-make-choices
@@ -660,6 +677,30 @@ end
 to display-layout-people-grouped-by-carrier
     layout-spring people (friends with [color != grey]) 1 1 1
     display
+end
+
+
+; ------- Helper methods for Experiments -------------------------------------------------------------
+
+to experimentChainReaction
+  if equilibriumReachedAt != 0 [  ; Always act only after an equilibrium has been reached
+    ; Determine which one was the biggest carrier after the first equilibrium, and use him to augment his prices
+    if experimentChainReaction-carrier = 0 [
+      set experimentChainReaction-carrier  min-one-of carriers [0 - subscribersCount]
+    ]
+    
+    ; Reset the equilibrium counters
+    set equilibriumReachedAt  0
+    set equilibriumNearlyReachedAt  0
+    set experimentChainReaction-waitForEquilibrium  30  ; wait to recompute if equlibria were reached, to avoid false positive equilibrium early on
+    
+    ; Augment price/s
+    ask experimentChainReaction-carrier [
+      set priceIn  priceIn + 10
+      set priceOut  priceOut + 10
+    ]
+    
+  ]
 end
 
 
@@ -1033,43 +1074,26 @@ PENS
 "default" 1.0 0 -16777216 true "" "ask carriers [\n  plot-pen-up\n  plotxy (ticks - 1) (accIncomeDiscounted-last / 100)\n  plot-pen-down\n  set-plot-pen-color color\n  plotxy ticks (accIncomeDiscounted / 100)\n]"
 
 MONITOR
-17
+19
 442
-184
+185
 487
-Red price out
-[priceOut] of one-of carriers with [color = red]
+ChainReacExt carrier - price out
+[priceOut] of experimentChainReaction-carrier
 17
 1
 11
 
 MONITOR
-16
-345
-172
-390
-Red price in
-[priceIn] of one-of carriers with [color = red]
+14
+347
+188
+392
+ChainReacExt carrier - price in
+[priceIn] of experimentChainReaction-carrier
 17
 1
 11
-
-BUTTON
-18
-300
-146
-333
-RED PRICE IN +
-ask carriers with [color = red] [\n  set priceIn  priceIn + 10\n]
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
 
 BUTTON
 17
@@ -1093,9 +1117,20 @@ SWITCH
 255
 192
 288
-stop_after_equilibrium?
-stop_after_equilibrium?
+stopAfterEquilibrium?
+stopAfterEquilibrium?
 1
+1
+-1000
+
+SWITCH
+7
+292
+194
+325
+experimentChainReaction?
+experimentChainReaction?
+0
 1
 -1000
 
