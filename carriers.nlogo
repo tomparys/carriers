@@ -1560,7 +1560,7 @@ NetLogo 5.0.3
       <value value="-1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="NewNash-2car-simultaneous-v1" repetitions="1" runMetricsEveryStep="false">
+  <experiment name="Nash-2car-simultaneous-v1" repetitions="1" runMetricsEveryStep="false">
     <setup>setup true</setup>
     <go>go</go>
     <metric>equilibriumReachedAt</metric>
